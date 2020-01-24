@@ -1,0 +1,81 @@
+<html>
+<head>
+<script src="/dojo/dojo.js" data-dojo-config="async:0"></script>
+<script src="/webappos.js"></script>
+
+  <link rel="stylesheet" href="../../css/jquery-ui.min.css">
+  <script src="/jquery-1.11.1.min.js"></script>
+  <script src="../../jquery-ui.min.js"></script>
+  <script>
+  $(function() {
+    $( "#from" ).datepicker({
+      changeMonth: true,
+      onClose: function( selectedDate ) {
+        $( "#to" ).datepicker( "option", "minDate", selectedDate );
+      }
+    });
+    $( "#to" ).datepicker({
+      changeMonth: true,
+      onClose: function( selectedDate ) {
+        $( "#from" ).datepicker( "option", "maxDate", selectedDate );
+      }
+    });
+    $( "#from" ).datepicker("option", "dateFormat", "yy-mm-dd");
+    $( "#to" ).datepicker("option", "dateFormat", "yy-mm-dd");
+
+  });
+  </script>
+  
+
+</head>
+<body>
+
+<b>Cross-filter name:</b> <input type="edit" id="name"/><p>
+<table>
+<tr><td><b>Start date:</b></td><td><b>End date:</b></td></tr>
+<tr><td><input type="text" id="from"/></td><td><input type="text" id="to"/></td></tr>
+</table>
+<script>
+
+var crossFilter = null;
+
+
+function load(_crossFilter)
+{
+  crossFilter = _crossFilter;
+  if (crossFilter.name)
+    document.getElementById("name").value = crossFilter.name;
+  else
+    document.getElementById("name").value = crossFilter.id;
+
+  if (crossFilter.fromDate)
+    from.value = crossFilter.fromDate;
+  if (crossFilter.toDate)
+    to.value = crossFilter.toDate;
+}
+
+function store(crossFilter)
+{
+  crossFilter.name = document.getElementById("name").value;
+  if (from.value)
+    crossFilter.fromDate = from.value;
+  else
+    crossFilter.fromDate = null;
+  if (to.value)
+    crossFilter.toDate = to.value;
+  else
+    crossFilter.toDate = null;
+
+  if (!crossFilter.name) {
+    crossFilter.state = "CONFIGURATION_ERROR";
+    crossFilter.stateMessage = "The name of the cross-filter is not specified.";
+    return;
+  }
+  crossFilter.state = "CONFIGURATION_OK";
+}
+
+</script>
+
+</body>
+</html>
+

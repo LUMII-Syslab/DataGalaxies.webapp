@@ -1,0 +1,304 @@
+<html>
+<head>
+<script src="/tda.js"></script>
+<script src="/jquery-1.11.1.min.js"></script>
+</head>
+<body>
+<div id="statusdiv"></div>
+<iframe id="myiframe" width="100%" height="700" src="http://localhost:4444/" onload="window.frameLoaded=true;if(window.loadCalled)performLoad();"></iframe>
+
+<script>
+
+var domain = location.protocol+'//'+location.hostname+(location.port ? ':'+location.port: '');
+
+var frameLoaded = false;
+var loadCalled = false;
+var stellarWind = null;
+
+var fAfter = null;
+
+function performRedo()
+{
+   document.getElementById('myiframe').onload = function () {};
+
+  var win = document.getElementById('myiframe').contentWindow;
+
+  var listener = function(event){
+    if ((event.data) && (event.data.substr(0,5)=="DONE:")) {
+
+      var json = JSON.parse(event.data.substr(5));
+
+
+      if (json.status == 'error') {
+        $("#statusdiv").html("Error while generating OpenRefine file or obtaining it.");
+        stellarWind.state = 'RUN_ERROR';
+      }
+      else {
+        stellarWind.state = 'RUN_OK';
+
+        $("#statusdiv").html("Saving generated file "+json.fileName+" into the galaxy as "+stellarWind.target[0].starData[0].fileName);
+        if (!tda.fileUploadFromURL(stellarWind.target[0].starData[0].fileName, 
+                            "http://localhost:4444/proxydownload/get/"+json.fileName)) {
+          stellarWind.state = 'RUN_ERROR';
+          $("#statusdiv").html("Error while saving generated file into the galaxy.");
+        }
+        else {
+          stellarWind.target[0].state = "RUN_OK";
+          $("#statusdiv").html("All OK.");
+        }
+      }
+      window.top.location = "http://localhost:4444/proxydownload/complete";
+      if (fAfter)
+        fAfter();
+    }
+  }
+  if (window.addEventListener){
+    addEventListener("message", listener, false);
+  } else {
+    attachEvent("onmessage", listener);
+  }
+  var domain = location.protocol+'//'+location.hostname+(location.port ? ':'+location.port: '');
+  setTimeout(function () {
+  win.postMessage(
+   "TDAMESSAGE:"+
+      "function TDA_GetURLParameter(name) {"+
+      "  return decodeURIComponent((new RegExp('[?|\&]' + name + '=' + '([^\&;]+?)(\&|#|;|$)').exec(location.search)||[,\"\"])[1].replace(/\\+/g, '%20'))||null"+
+      "}"+
+      "TDA_WaitForCondition("+
+      "  function(){console.log(TDA_FindElementByTagName('a', 'Undo / Redo ')); return TDA_FindElementByTagName('a', 'Undo / Redo ');},"+
+      "  function(){"+
+      "    var el = TDA_FindElementByTagName('a', 'Undo / Redo ');"+
+      "    TDA_FireEvent(el, 'click');"+
+      "    el = TDA_FindElementByClassName('button-pill-right', 'Apply');"+
+      "    TDA_FireEvent(el, 'click');"+
+      "    TDA_WaitForCondition("+
+      "      function(){return TDA_FindElementByClassName('history-operation-json');},"+
+      "      function(){"+
+      "        var el = TDA_FindElementByClassName('history-operation-json');"+
+      "        el.value = '"+stellarWind.redoJson.split("\\").join("\\\\").split('\"').join("\\\"").split('\'').join("\\\'")+"';"+
+      "        var b = TDA_FindElementByClassName('button', 'Perform Operations');"+
+      "        TDA_FireEvent(b, 'click');"+
+      "        setTimeout(function() {" + // setTimeout(1) start
+      "        TDA_WaitForCondition("+
+      "          function(){var els = document.getElementsByClassName('dialog-overlay'); var loading=(els)&&(els.length>0);"+
+      "                     return (!loading) && (TDA_FindElementByClassName('button-menu','Export' ));},"+
+      "          function(){"+
+      "          setTimeout(function() {" + // setTimeout(2) start
+      "            var menu = TDA_FindElementByClassName('button-menu','Export');"+
+      "            TDA_FireEvent(menu, 'click');"+
+      "            TDA_WaitForCondition("+
+      "              function(){return TDA_FindElementByClassName('menu-item','Templating...');},"+
+      "              function(){"+
+      "                var item = TDA_FindElementByTagName('a','Templating...');"+
+      "                TDA_FireEvent(item, 'click');"+
+      "                TDA_WaitForCondition("+
+      "                  function(){var areas = TDA_FindElementsByTagName('textarea');"+
+      "                             var buttons = TDA_FindElementsByClassName('button','Export');"+
+      "                             return (buttons.length>=2) && (areas.length>0) && (areas[areas.length-1].value);},"+
+      "                  function(){"+
+      "                    var buttons = TDA_FindElementsByClassName('button','Export');"+
+      "                    var b = buttons[buttons.length-1];"+
+      "                    var xhr = new XMLHttpRequest();"+
+      "                    xhr.open('GET', '/proxydownload/prepare?filename="+stellarWind.target[0].starData[0].fileName+"', false);"+
+      "                    xhr.send(null);"+
+//variant:      "                    window.top.location = 'http://localhost:4444/proxydownload/prepare?filename="+stellarWind.target[0].starData[0].fileName+"';"+
+
+      "                    TemplatingExporterDialog.prototype._export = function() {"+
+      "                        var name = $.trim(theProject.metadata.name.replace(/\W/g, ' ')).replace(/\s+/g, '-');"+
+      "                        var form = document.createElement(\"form\");"+
+      "                        $(form)"+
+      "                            .css(\"display\", \"none\")"+
+      "                            .attr(\"method\", \"post\")"+
+      "                            .attr(\"action\", \"/command/core/export-rows/\" + name + \".json\");"+
+      "                        var appendField = function(name, value) {"+
+      "                            $('<textarea />')"+
+      "                                .attr(\"name\", name)"+
+      "                                .attr(\"value\", value)"+
+      "                                .appendTo(form);"+
+      "                        };"+
+      "                        appendField(\"engine\", JSON.stringify(ui.browsingEngine.getJSON()));"+
+      "                        appendField(\"project\", theProject.id);"+
+      "                        appendField(\"format\", \"template\");"+
+      "                        appendField(\"sorting\", JSON.stringify(ui.dataTableView.getSorting()));"+
+      "                        appendField(\"prefix\", this._elmts.prefixTextarea[0].value);"+
+      "                        appendField(\"suffix\", this._elmts.suffixTextarea[0].value);"+
+      "                        appendField(\"separator\", this._elmts.separatorTextarea[0].value);"+
+      "                        appendField(\"template\", this._elmts.templateTextarea[0].value);"+
+      "                        document.body.appendChild(form);"+
+      "                          form.submit();"+
+      "                          document.body.removeChild(form);"+
+      "                    };"+
+
+      "                    var json = null;"+
+
+      "                    var f = function(){"+
+      "                        var xhr = new XMLHttpRequest();"+
+      "                        xhr.open('GET', '/proxydownload/status', true);"+
+      "                        xhr.onreadystatechange = function() {"+
+      "                          if (xhr.readyState != 4) return;"+
+      "                          json = JSON.parse(xhr.responseText);"+
+      "                          if ((json.status!='prepared')&&(json.status!='downloading')) {"+
+      "                            parent.postMessage('DONE:'+xhr.responseText,'"+domain+"');"+
+      "                            window.top.location = '/proxydownload/complete';"+
+      "                          }"+
+      "                          else"+
+      "                            setTimeout(f,100);"+
+      "                        };"+
+      "                        xhr.send(null);"+
+      "                    };"+
+      "                    setTimeout(function(){TDA_FireEvent(b, 'click'); setTimeout(f, 500);},0);"+
+
+      "                  }"+
+      "                );"+
+      "              }"+
+      "            );"+
+      "          },1000);" + // setTimeout(2) end
+      "          }" + 
+      "        );"+
+      "        },1000);"+ // setTimeout(1) end
+      "      }"+
+      "    );"+
+      "  }"+
+      ");",
+
+   "http://localhost:4444"
+  );
+  },
+  200);
+
+}
+
+function performLoad()
+{
+  document.getElementById('myiframe').onload = performRedo;
+  // Uploading file to OpenRefine...
+
+  var win = document.getElementById('myiframe').contentWindow;
+
+  // refreshing with RUNNING state; do not link to stellarWind, since
+  // that link must be created AFTER the stellar wind has been emitted...
+  stellarWind.state="RUNNING";
+  tda.jsonsubmit("storeObjects", [stellarWind]);  
+  var dataGalaxy = tda.jsonsubmit("findObjects", {
+      isKindOf : "DataGalaxy"
+    }
+  )[0];
+  tda.jsonsubmit("RefreshGalaxyCommand", {
+    dataGalaxy: [dataGalaxy]
+  });
+
+  setTimeout(function () {
+  win.postMessage(
+   "TDAMESSAGE:"+
+   "  function q(){"+
+   "    TDA_FireEvent(TDA_FindElementByClassName('action-area-tab','Create Project'),'click');"+
+   "    TDA_FireEvent(document.getElementsByClassName('create-project-ui-source-selection-tab')[1], 'click');"+
+   "    document.getElementsByClassName('default-importing-web-url')[0].value = encodeURI('"+domain+"/filedownload/"+tda.cloudLocation+"/"+stellarWind.source[0].starData[0].fileName+"?access_token="+tda.getAccessToken("filedownload")+"');"+
+   "    TDA_FireEvent(document.getElementsByClassName('button-primary')[1], 'click');"+
+   "    function f(){"+
+   "      var parseAs = TDA_FindElementByClassName('default-importing-parsing-control-panel-format', 'Line-based text files');"+
+   "      TDA_FireEvent(parseAs, 'click');"+
+   "      setTimeout(ff,200);"+
+   "    };"+
+/*   "    function f2(){"+
+           "var els=document.getElementsByName('column-separator');"+
+           "if ((!els) || (els.length==0)) {"+
+           "  setTimeout(f,10);"+
+           "  return;"+
+           "}"+
+           "TDA_FireEvent(els[els.length-1], 'click');"+
+           "var label = TDA_FindElementByTagName('label','custom');"+
+           "TDA_FireEvent(label, 'click');"+
+           "document.getElementsByClassName('lightweight')[0].value=' ';"+
+           "TDA_FireEvent(document.getElementsByClassName('lightweight')[0], 'change');"+
+           "setTimeout(ff,500);"+
+         "};"+*/
+         "function ff(){"+
+           "var els=document.getElementsByTagName('button');"+
+           "for (var i=0; i<els.length;i++) {"+
+           "  if (els[i].innerHTML.substr(0,14)=='Create Project')"+
+           "    break;"+
+           "}"+
+           "if (i>=els.length) {"+
+           "  setTimeout(ff, 10);"+
+           "  return;"+
+           "}"+
+           "setTimeout(function(){TDA_FireEvent(els[i], 'click');}, 100);"+
+
+         "};"+
+   "    TDA_WaitForCondition("+
+   "      function(){return TDA_FindElementByClassName('default-importing-parsing-control-panel-format', 'Line-based text files');},"+
+   "      function(){setTimeout(f,500);}"+
+   "    );"+
+   "  };"+
+   "  TDA_WaitForCondition("+
+   "    function(){var x = document.getElementsByClassName('action-area-tab'); return (x)&&(x.length>0);},"+
+   "    q"+
+   "  );",
+   "http://localhost:4444"
+  );
+  },
+  200);
+
+}
+
+function emitAsync(_stWind, _fAfter)
+{
+  stellarWind = _stWind;
+  fAfter = _fAfter;
+
+  if (!stellarWind.target[0].starData) {
+    stellarWind.state = "RUN_ERROR";
+    finalized = true;
+    fAfter();
+    return;
+  }
+
+  if (!stellarWind.target[0].starData[0].fileName) {
+    stellarWind.state = "RUN_ERROR";
+    finalized = true;
+    fAfter();
+    return;
+  }
+
+  loadCalled = true;
+  if (frameLoaded)
+    performLoad();
+}
+
+
+var finalized = false;
+
+function finalize()
+{
+  if (finalized)
+    return;
+  finalized = true;
+
+  if (stellarWind && (stellarWind.state=="RUNNING")) {
+    stellarWind.state = "RUN_ERROR";
+    stellarWind.stateMessage = "Run cancelled.";
+    tda.jsonsubmit("storeObjects", [stellarWind]);
+  }
+
+  var win = document.getElementById('myiframe').contentWindow;
+  win.postMessage(
+    "TDAMESSAGE:"+
+      "function TDA_GetURLParameter(name) {"+
+      "  return decodeURIComponent((new RegExp('[?|\&]' + name + '=' + '([^\&;]+?)(\&|#|;|$)').exec(location.search)||[,\"\"])[1].replace(/\\+/g, '%20'))||null"+
+      "}"+
+      // deleting the openrefine project...
+      "        var xhr = new XMLHttpRequest();"+
+      "        xhr.open('POST', '/command/core/delete-project', false);"+
+      "        xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');"+
+      "        xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');"+
+      "        xhr.setRequestHeader('Accept', 'application/json, text/javascript, */*');"+
+      "        xhr.send('project='+TDA_GetURLParameter('project'));",
+    "http://localhost:4444"
+  );
+}
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,52 @@
+<html>
+
+<head>
+  <script src="/webappos.js"></script>
+</head>
+
+<body>
+
+  <b>Stellar wind name:</b> <input type="edit" id="stWindName" />
+  <p>
+
+    <script>
+      var stellarWind = null;
+
+
+
+      function load(stWind) {
+        if (stWind.name)
+          document.getElementById("stWindName").value = stWind.name;
+        stellarWind = stWind;
+        loadCalled = true;
+
+      }
+
+      function store(stWind) {
+        stWind.name = document.getElementById("stWindName").value;
+        if (!stWind.name) {
+          stWind.state = "CONFIGURATION_ERROR";
+          return;
+        }
+
+
+        if ((!stWind.target[0].starData) || (stWind.target[0].starData.length == 0)) {
+          webappos.webcall_and_wait("putGalacticTypeIntoMetamodel", "JSON file");
+          //TODO ?? perhaps, we have to wait when the "JSON file" is synhronized; can be implemented using async webappos.webcall(...).then(...)
+          let starData = new webmem["JSON file"]();
+
+          starData.setFileName(stWind.name + "result.json");
+          stWind.target[0].starData = [{
+            reference: starData.reference
+          }];
+          stWind.target[0].state = "CONFIGURATION_OK";
+        }
+
+        if (!stWind.target[0].starData[0].fileName)
+          stWind.target[0].starData[0].fileName = stWind.name + "result.json";
+      }
+    </script>
+
+</body>
+
+</html>

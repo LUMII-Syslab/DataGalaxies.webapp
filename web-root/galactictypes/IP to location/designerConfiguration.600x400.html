@@ -1,0 +1,74 @@
+<html>
+<head>
+<script src="/webappos.js"></script>
+</head>
+<body>
+
+<b>Stellar wind name:</b> <input type="edit" id="stWindName"/><p>
+<b>JSON expression for IP:</b> <input type="edit" id="jsonPath"/>
+<p style="text-indent: 1.5em">
+Use a navigation expression consisting of JavaScript keys.
+The navigation expression must point to a key, where the IP address is
+located in the source JSON.
+You may use the wildcard "*" to specify that all the keys at
+the given depth have to be traversed.
+</p>
+<p style="text-indent: 1.5em">
+<b><i>Example:</i></b> <code>data.*.ip</code>
+</p>
+<p style="text-indent: 1.5em">
+This expression is equivalent to:
+</p>
+<p style="text-indent: 1.5em">
+<code>for (k in source.data) { process IP from source.data[k].ip }</code>
+</p>
+
+
+<script>
+
+var stellarWind = null;
+
+
+
+function load(stWind)
+{
+  if (stWind.name)
+    document.getElementById("stWindName").value = stWind.name;
+  if (stWind.jsonPath)
+    document.getElementById("jsonPath").value = stWind.jsonPath;
+  stellarWind = stWind;
+  loadCalled = true;
+
+}
+
+function store(stWind)
+{
+  stWind.name = document.getElementById("stWindName").value;
+  if (!stWind.name) {
+    stWind.state = "CONFIGURATION_ERROR";
+    fAfter();
+    return;
+  }
+
+  stWind.jsonPath = document.getElementById("jsonPath").value;
+
+
+  if ((!stWind.target[0].starData) || (stWind.target[0].starData.length==0)) {
+    webappos.webcall("putGalacticTypeIntoMetamodel", "JSON file").then(function(){
+      var starData = new webmem.["JSON file"]();
+      starData.setFileName(stWind.name+"result.csv");
+      webmem[stWind.reference].target[0].linkStarData(starData);
+      webmem[stWind.reference].target[0].setState("CONFIGURATION_OK");
+    });
+  }
+  else {
+    if (!stWind.target[0].starData[0].fileName)
+      stWind.target[0].starData[0].fileName = stWind.name+"result.json";
+  }
+}
+
+</script>
+
+</body>
+</html>
+

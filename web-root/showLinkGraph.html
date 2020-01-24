@@ -1,0 +1,75 @@
+<!doctype html>
+<html>
+    <head>
+        <title>Network | Basic usage</title>
+        <style type="text/css">
+            #mynetwork {
+                width: 100%;
+                height: 800px;
+                border: 1px solid lightgray;
+                background-color: rgba(236, 240, 241, 1);
+            }
+        </style>
+    </head>
+    <body>
+    <input type="file" onchange="read(this)"/>
+    <!-- <button onclick="saveJson()">Save graph</button> -->
+    <div id="mynetwork"></div>
+    <pre id="eventSpan"></pre>
+    
+    <script type="text/javascript" src="../Utils/vis-network.min.js"></script>
+    <script type="text/javascript" src="../Utils/underscore-min.js"></script>
+    <script type="text/javascript" src="../Utils/FileSaver.min.js"></script>
+
+    <script type="text/javascript" src="../Utils/graphVis.js"></script>
+
+    <script type="text/javascript">
+        var graphVis;
+        function readFile(file) {
+          return new Promise((resolve, reject) => {
+            let fr = new FileReader();
+            fr.onload = x=> resolve(fr.result);
+            fr.readAsText(file);
+        })}
+        async function read(input) {
+
+          var file = input.files[0];
+          if (file.type && file.type == "application/json") {
+            var text = await readFile(input.files[0]);
+            graph = JSON.parse(text)
+            if (graph.layoutInfo) graph = createGraph(graph);
+            graphVis = new GraphVis(graph, document.getElementById('mynetwork'));
+            console.log("graph with positions", graphVis.getGraph());
+          }
+          else {
+            console.log("File " + file.name + " is not JSON.")
+          }
+        }
+        function createGraph(data) {
+            console.log("data", data)
+            var graph = {nodes: [], edges: []}
+            _.each(data.net_chart_data.nodes, function(node) {
+                graph.nodes.push({id: node.id, label: node.style.label, shape: 'image', image: node.style.image});
+            })
+            _.each(data.net_chart_data.links, function(link) {
+                graph.edges.push({id: link.id, from: link.from, to: link.to, arrows: 'to', color:{color: link.style.fillColor}});
+            })
+            return graph;
+        }
+        // function saveJson() {
+        //     var data = graphVis.getGraph();
+        //     var blob = new Blob([JSON.stringify(data)], {type: "text/plain;charset=utf-8"});  
+
+        //     var loc = window.location.pathname;
+        //     var dir = (window.location.pathname).substring(0, loc.lastIndexOf('/'));
+
+        //     // var fileName = dir + "/graphPos.json";
+        //     // console.log("fileName", fileName, data)
+
+        //     var fileName = "graphPos.json";
+
+        //     saveAs(blob, fileName);
+        // }
+    </script>
+    </body>
+</html>

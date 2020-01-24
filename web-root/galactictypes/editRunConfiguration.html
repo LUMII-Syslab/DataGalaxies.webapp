@@ -1,0 +1,222 @@
+<html>
+
+<head>
+  <script src="/dojo/dojo.js" data-dojo-config="async:1"></script>
+  <link rel="stylesheet" href="/dijit/themes/claro/claro.css" media="screen">
+  <link rel="stylesheet" href="/dojox/grid/resources/Grid.css" media="screen">
+  <link rel="stylesheet" href="/dojox/grid/resources/claroGrid.css" media="screen">
+
+  <script type="text/javascript" src="/webappos.js"></script>
+
+  <link href="../css/jquery-ui.min.css" rel="stylesheet">
+  <script src="/jquery.js"></script>
+  <script src="../jquery-ui.js"></script>
+
+  <script>
+    var rc = null; // webmem (repository object)
+    var grid = null;
+    var store = null;
+
+    function bodyResized() {
+      $("#gridDiv2").css("height", (document.body.parentElement.clientHeight - 50) + "px");
+    };
+
+    require(['dojo/_base/lang', 'dojox/grid/DataGrid', 'dojo/data/ItemFileWriteStore', 'dojox/grid/cells/dijit',
+        'dojo/on', 'dojo/dom', 'dojo/domReady!'
+      ],
+      function (lang, DataGrid, ItemFileWriteStore, cells, on, dom) {
+
+        var r = webappos.js_util.get_query_value('runConfigurationReference');
+        if (!r) {
+          alert("Error: invalid run configuration reference.");
+          return;
+        }
+
+        rc = webmem[r];
+
+        if (!rc) {
+          alert("Error: could not get the desired run configuration from the repository.");
+          return;
+        }
+
+        var data = {
+          identifier: "id",
+          items: []
+        };
+
+        var components = webappos.webcall_and_wait("findObjects", {
+          isKindOf: "GalaxyComponent"
+        });
+        if (!components) {
+          alert("Error getting galaxy components.");
+          return;
+        }
+
+        var idToRow = {};
+
+        for (var i = 0; i < components.length; i++) {
+          data.items.push(lang.mixin({
+            id: i + 1
+          }, {
+            id: components[i].id,
+            name: components[i].name,
+            active: true,
+            visible: false,
+            mustconf: false
+          }));
+          idToRow[components[i].id] = i;
+        }
+        store = new ItemFileWriteStore({
+          data: data
+        });
+
+        var layout = [
+          [{
+              'name': 'ID',
+              'field': 'id'
+            },
+            {
+              'name': 'Component name',
+              'field': 'name'
+            },
+            {
+              'name': 'Active',
+              'field': 'active',
+              'editable': 'true',
+              cellType: dojox.grid.cells.Bool,
+              styles: 'text-align: center;'
+            },
+            {
+              'name': 'Visible',
+              'field': 'visible',
+              'editable': 'true',
+              cellType: dojox.grid.cells.Bool,
+              styles: 'text-align: center;'
+            },
+            {
+              'name': 'Must be configured',
+              'field': 'mustconf',
+              'editable': 'true',
+              cellType: dojox.grid.cells.Bool,
+              styles: 'text-align: center;'
+            }
+          ]
+        ];
+
+        grid = new DataGrid({
+          id: 'grid',
+          store: store,
+          selectionMode: 'single',
+          structure: layout,
+          //        autoWidth: true,
+          autoHeight: true
+          //        rowSelector: '20px'
+        });
+
+
+        on(grid, "ApplyCellEdit", function (inValue, inRowIndex, inFieldName) {
+
+          var item = grid.getItem(inRowIndex);
+          if (item) {
+            if (inValue) { // true
+              if ((inFieldName == "mustconf") || (inFieldName == "visible")) {
+                store.setValue(item, "active", true);
+                store.setValue(item, "visible", true);
+              }
+            } else { // false
+              if ((inFieldName == "active") || (inFieldName == "visible")) {
+                store.setValue(item, "visible", false);
+                store.setValue(item, "mustconf", false);
+              }
+            }
+          }
+        });
+
+        grid.placeAt("gridDiv");
+
+        grid.startup();
+
+        if (rc.visibleComponent) {
+          for (var i = 0; i < rc.visibleComponent.length; i++) {
+
+            var item = grid.getItem(idToRow[rc.visibleComponent[i].id]);
+            if (item)
+              store.setValue(item, "visible", true);
+          }
+        }
+
+        if (rc.mustConfigureComponent) {
+          for (var i = 0; i < rc.mustConfigureComponent.length; i++) {
+            var item = grid.getItem(idToRow[rc.mustConfigureComponent[i].id]);
+            if (item)
+              store.setValue(item, "mustconf", true);
+          }
+        }
+
+        if (rc.deactivatedComponent) {
+          for (var i = 0; i < rc.deactivatedComponent.length; i++) {
+            var item = grid.getItem(idToRow[rc.deactivatedComponent[i].id]);
+            if (item)
+              store.setValue(item, "active", false);
+          }
+        }
+
+      });
+
+    require(["dojo/parser", "dijit/form/Button", "dojo/domReady!"],
+      function (parser, Button) {
+        parser.parse();
+        bodyResized();
+      });
+
+    function closeMyFrame() {
+      let ev = new webmem.CloseFrameRequestedEvent();
+      ev.setForce(true);
+      ev.linkFrame(webmem[parseInt(webappos.js_util.get_query_value('frameReference'))]);
+      webmem.submit(ev);
+
+    }
+
+    function onOK() {
+      rc.setVisibleComponent([]);
+      rc.setMustConfigureComponent([]);
+      rc.setDeactivatedComponent([]);
+      for (var ri = 0; ri < grid.rowCount; ri++) {
+        var item = grid.getItem(ri);
+        var obj = webappos.webcall_and_wait("findObjects", {
+          isKindOf: "GalaxyComponent",
+          id: store.getValue(item, "id", null)
+        });
+        if (obj)
+          obj = obj[0];
+        if (!store.getValue(item, "active", null))
+          rc.linkDeactivatedComponent(webmem[obj.reference]);
+        if (store.getValue(item, "visible", null))
+          rc.linkVisibleComponent(webmem[obj.reference]);
+        if (store.getValue(item, "mustconf", null))
+          rc.linkMustConfigureComponent(webmem[obj.reference]);
+      }
+
+      closeMyFrame();
+    }
+  </script>
+</head>
+
+<body class="claro" onresize="bodyResized();">
+
+  <div id="gridDiv2" style="border:0;padding:0;margin:0;overflow-x: hidden; background-color:#e3ebf3" class="claro">
+    <div id="gridDiv" style="border:0;padding:0;margin:0;overflow-x: hidden; overflow-y: hidden;" class="claro">
+    </div>
+  </div>
+
+  <div style="position:absolute; margin-top:-40; top:100%;">
+    <button id="okButton" class='claro' type="button" data-dojo-type="dijit/form/Button" onClick="onOK();">OK</button>
+    <button id="cancelButton" style="margin-right:0" class='claro' type="button" data-dojo-type="dijit/form/Button"
+      onClick="closeMyFrame();">
+      Cancel
+    </button>
+  </div>
+
+</body>
+
+</html>

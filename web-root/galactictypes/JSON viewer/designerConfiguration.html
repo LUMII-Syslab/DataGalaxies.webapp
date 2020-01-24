@@ -1,0 +1,22 @@
+<script src="/webappos.js"></script>
+<script src="/jquery.js"></script>
+Planet name: <input type="edit" id="planetName" value="JSON viewer"/>
+<p>
+<script>
+
+function load(planet)
+{
+  if (planet.name)
+    document.getElementById("planetName").value = planet.name;
+}
+
+function store(planet)
+{
+  planet.name = document.getElementById("planetName").value;
+  if (!planet.name)
+    planet.state = "CONFIGURATION_ERROR";
+}
+
+</script>
+
+

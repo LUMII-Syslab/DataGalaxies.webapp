@@ -1,0 +1,148 @@
+<html>
+<head>
+<script src="/webappos.js"></script>
+<script src="/jquery.min.js"></script>
+</head>
+<body>
+Getting locations from IP addresses: <div id="infodiv"></div>
+
+<script>
+
+var stellarWind = null;
+var fAfter = null;
+
+function recurse(json, attr, otherAttrs)
+{
+  if (otherAttrs.length == 0) {
+    var xhr = new XMLHttpRequest();
+    xhr.onreadystatechange = function () {
+      if (xhr.readyState != 4) return;
+      if (xhr.status == 200) {
+        try {
+          var json2 = JSON.parse(xhr.responseText);
+          json.location = json2.city + ", " + json2.country;
+          json.city = json2.city;
+          json.country = json2.country;
+        }
+        catch(t) {}
+      }
+    };
+    xhr.open('GET', 'http://ip-api.com/json/'+json[attr], false);
+    xhr.send(null);
+    return; // end of recursion
+  }
+
+  if (attr=="*") {
+    var nextAttr = otherAttrs.shift();
+    for (var k in json) {
+      recurse(json[k], nextAttr, otherAttrs);
+    }
+  }
+  else {
+    nextAttr = otherAttrs.shift();
+    recurse(json[attr], nextAttr, otherAttrs);
+  }
+}
+
+function emitAsync(_stWind, _fAfter)
+{
+  stellarWind = _stWind;
+  fAfter = _fAfter;
+
+  if (!stellarWind.source[0].starData) {
+    stellarWind.state = "RUN_ERROR";
+    finalized = true;
+    fAfter();
+    return;
+  }
+
+  if (!stellarWind.target[0].starData) {
+    stellarWind.state = "RUN_ERROR";
+    finalized = true;
+    fAfter();
+    return;
+  }
+
+  if (typeof (stellarWind.jsonPath) == 'undefined') {
+    stellarWind.state = "RUN_ERROR";
+    finalized = true;
+    fAfter();
+    return;
+  }
+
+  if (stellarWind.jsonPath == '') {
+    stellarWind.state = "RUN_ERROR";
+    finalized = true;
+    fAfter();
+    return;
+  }
+
+  if (!stellarWind.target[0].starData[0].fileName) {
+    stellarWind.state = "RUN_ERROR";
+    finalized = true;
+    fAfter();
+    return;
+  }
+
+  var res = webappos.webcall_and_wait("webappos.getFileContentFromCurrentProjectAsUTF8String", stellarWind.source[0].starData[0].fileName);
+
+  var sFile = res.content;
+
+  var sJson;
+  try {
+    sJson = JSON.parse(sFile);
+  }
+  catch(t) {
+    alert("could not parse source json");
+    stellarWind.state = "RUN_ERROR";
+    finalized = true;
+    fAfter();
+    return;
+  }
+
+  var attrs = stellarWind.jsonPath.split('.');
+  var attr = attrs.shift();
+  recurse(sJson, attr, attrs);
+
+  var result = webappos.webcall_and_wait("webappos.uploadFileToCurrentProject",
+    {
+      fileName: stellarWind.target[0].starData[0].fileName,
+      content: JSON.stringify(sJson)
+    }).result;
+
+  if (result) {
+    stellarWind.state = 'RUN_OK';
+    stellarWind.target[0].state = "RUN_OK";
+  }
+  else {
+    stellarWind.state = 'RUN_ERROR';
+    stellarWind.target[0].state = "CONFIGURATION_OK";
+  }
+  finalized = true;
+  fAfter();
+
+}
+
+
+var finalized = false;
+
+function finalize()
+{
+  if (finalized)
+    return;
+  finalized = true;
+
+  if (stellarWind && (stellarWind.state=="RUNNING")) {
+    stellarWind.state = "RUN_ERROR";
+    stellarWind.stateMessage = "Run cancelled.";
+    webappos.webcall_and_wait("storeObjects", [stellarWind]);
+  }
+
+  if (fAfter)
+    fAfter();
+}
+
+</script>
+
+</body>
+</html>

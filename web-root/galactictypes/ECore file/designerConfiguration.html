@@ -1,0 +1,34 @@
+<script src="/webappos.js"></script>
+<script src="/jquery.min.js"></script>
+
+Star name: <input type="edit" id="starName" value="New ECore Star"/>
+<p>
+Choose .ecore file:
+<input id="finput" name="finput2" type="file" accept=".ecore" onchange='$("#selectedFileDiv").html(this.files[0].name+" chosen for upload")'/>
+
+
+<script>
+
+function load(star)
+{
+
+  star = webmem[star.reference];
+
+  if (star.name)
+    $("#starName").value = star.name;
+
+  webappos.js_util.initialize_file_input(finput, star.starData[0].fileName);
+}
+
+function store(star)
+{
+  star.name = document.getElementById("starName").value;
+
+  star.starData[0].fileName=webappos.js_util.upload_file_input(finput, webappos.project_id);
+  if (!star.name || !star.starData[0].fileName)
+    planet.state = "CONFIGURATION_ERROR";
+}
+
+</script>
+
+

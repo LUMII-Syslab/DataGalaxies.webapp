@@ -1,0 +1,92 @@
+<html>
+<head>
+  <script src="/webappos.js"></script>
+  <script src="/jquery.js"></script>
+  <script src="../../netchart/lib/zoomcharts.js"></script>
+  <meta charset="utf-8">
+</head>
+
+<body>
+<span style="float:right;"><a href="license.html" target="_blank">License</a></span>
+ <div id="outputDiv" style="font-family: 'Consolas', 'monospace'; background-color:#e3ebf3;"></div>
+ <div id="chartContainer" style="width:300px;height:300px"></div> 
+ <script>
+  function load(planet) {
+
+   var result = webappos.webcall_and_wait("webappos.getFileContentFromCurrentProjectAsUTF8String", planet.star[0].starData[0].fileName);
+   if (!result || !result.content) {
+      console.log("Could not read the planet data file "+planet.star[0].starData[0].fileName,result);
+      return;
+   }
+
+   var js;
+   try {
+      js = JSON.parse(result.content);
+   }
+   catch(t) {
+      console.log("Could not parse planet data.");
+      return;     
+   }
+
+   result = webappos.webcall_and_wait("webappos.getFileContentFromCurrentProjectAsUTF8String", planet.styleFileName);
+   if (!result || !result.content) {
+      console.log("Could not read the planet styles file "+planet.styleFileName);
+      return;
+   }
+
+   var jsStyles;
+   try {
+      jsStyles = JSON.parse(result.content);
+   } 
+   catch(t) {
+      console.log("Could not parse planet styles.");
+      return;
+   }
+
+
+   for (x in js.nodes) {
+    if (!js.nodes[x].style)
+     js.nodes[x].style=new Object;
+    for (styles in jsStyles.nodes) {
+     if (js.nodes[x][jsStyles.nodes[styles].attribute]) {
+	  js.nodes[x].style[jsStyles.nodes[styles].style]=jsStyles.nodes[styles].value[js.nodes[x][jsStyles.nodes[styles].attribute]];
+	 }
+	}
+	js.nodes[x].style.label=js.nodes[x].label;
+	delete js.nodes[x].label;
+   }
+   for (x in js.edges) {
+    if (!js.edges[x].style)
+     js.edges[x].style=new Object;
+    for (styles in jsStyles.edges) {
+     if (js.edges[x][jsStyles.edges[styles].attribute]) {
+	  js.edges[x].style[jsStyles.edges[styles].style]=jsStyles.edges[styles].value[js.edges[x][jsStyles.edges[styles].attribute]];
+	 }
+	}
+	js.edges[x].from=js.edges[x].source;
+    js.edges[x].to=js.edges[x].target;
+    js.edges[x].style.label=js.edges[x].label;
+	delete js.edges[x].source;
+	delete js.edges[x].target;
+	delete js.edges[x].label;
+   }
+   js.links=js.edges;
+   var s = JSON.stringify(js, null, 2);
+   try {
+    var json = JSON.parse(s);
+    s = JSON.stringify(json, null, 2);
+   }
+   catch(t) {
+     console.log(t);
+   }
+   console.log("s=",s);
+   chart = new NetChart({
+    container: document.getElementById("chartContainer"),
+	data:{preloaded:s},
+	width: 750,
+	height: 500
+   });
+  }
+ </script>
+</body>
+</html>

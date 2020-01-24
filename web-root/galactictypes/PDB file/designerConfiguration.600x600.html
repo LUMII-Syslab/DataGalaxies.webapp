@@ -1,0 +1,214 @@
+<html>
+<head>
+<link href="/dropzone/downloads/css/dropzone.css" type="text/css" rel="stylesheet" />
+<!--<link href="/dropzone/downloads/css/basic.css" type="text/css" rel="stylesheet" />-->
+<script src="/dropzone/downloads/dropzone.js"></script>
+
+<script src="/tda.js"></script>
+<script src="/jquery-1.11.1.min.js"></script>
+<!--<script src="/jquery-ui-1.10.4.min.js"></script-->
+
+<!--	<link href="/css/ui-lightness/jquery-ui-1.10.4.css" rel="stylesheet">
+	<script src="/jquery-1.10.2.js"></script>
+	<script src="/jquery-ui-1.10.4.js"></script>-->
+
+
+<style type="text/css">
+        form
+        {
+            height: 5%;
+            overflow: hidden;
+        }
+</style>
+</head>
+<body>
+
+Star name: <input type="edit" id="starName" value="Protein Data Bank"/>
+<p>
+Choose .pdb file:
+
+<div id="my-awesome-dropzone"></div>
+
+<script>
+  var prevFileName = null;
+  var fileName = null;
+  var myDropZone = null;
+
+
+function object_keys(obj) {
+            var keys = [], name;
+            for (name in obj) {
+                if (obj.hasOwnProperty(name)) {
+                    keys.push(name);
+                }
+            }
+            return keys;
+        }
+
+$(document).ready(function() {
+
+  $("#my-awesome-dropzone").attr("action", "/fileupload/"+tda.cloudLocation);
+  $("#my-awesome-dropzone").attr("class", "dropzone");
+
+  var options = {
+    url: "/fileupload/"+tda.cloudLocation,
+//    maxFiles: 1,    
+    addRemoveLinks: true,
+    init: function() {
+     
+    this.on("sending", function(file, xhr, formData) {
+
+/*    tda.showDialogAsync("Error ",
+               "File "+file.name+" already exists.<br>What do you want to do?<br>"+
+               "<input type='button' value='Overwrite' onclick='alert(\"overwrite\"); tda.closeDialog();'></input>&nbsp;"+
+               "<input type='button' value='Use previous' onclick='alert(\"Use previous\");'></input>&nbsp;"+
+               "<input type='button' value='Skip' onclick='alert(\"skip\");'></input>&nbsp;"+
+               "<input type='button' value='Enter different name' onclick='alert(\"New name\");'></input>&nbsp;");*/
+
+      var customFileName = tda.fileNameForUpload(file.name);
+      if (!customFileName) 
+        formData.append("custom_file_name", ""); // skip
+      else {
+        file.name = customFileName;
+        formData.append("custom_file_name", customFileName);
+      }
+    });
+
+      this.on("removedfile", function(file) {
+/*        var ss="";
+        for (var key in file)
+           ss += " "+key;
+        alert(ss+"; "+file.status+" "+file.accepted);*/
+
+        if (file.accepted && (file.status!="error")) {
+          alert("file removed "+file.name+" "+file.status+" "+file.accepted); 
+          tda.fileDelete(file.name);  
+        }
+      });
+
+      this.on("success", function(file) {
+        fileName = file.name;
+// creating border
+file.previewElement.addEventListener("click", function(e) {
+if (!file.previewElement.chosen) {
+  file.previewElement.style.border = "solid #0000FF";
+  file.previewElement.chosen = true;
+}
+else {
+  file.previewElement.style.border = null;
+//  delete file.previewElement.style.border;
+  file.previewElement.chosen = false;
+}
+
+        });
+
+
+      });
+/*      this.on("addedfile", function(file) {
+        file.name = "abc.xyz";
+      });*/
+    },
+    accept: function(file, done) {
+/*      if ( (file.name.indexOf(".pdb", file.name.length - 4) == -1) &&
+           (file.name.indexOf(".PDB", file.name.length - 4) == -1)
+         ) {
+        done("Not a .pdb file");
+      }
+      else*/ { done(); }
+    }
+  };
+
+//  var myDropzone = new Dropzone("div#my-awesome-dropzone", options);
+//  myDropZone = new Dropzone( "div#my-awesome-dropzone", options);
+  myDropZone = new Dropzone( "#my-awesome-dropzone", options);
+//  myDropZone = $("div#my-awesome-dropzone").dropzone(options);
+//  Dropzone.options.myAwesomeDropzone = options;
+});
+
+</script>
+
+<!--<p>
+<input id="finput" name="finput2" type="file" accept=".pdb" onchange='$("#selectedFileDiv").html(this.files[0].name+" chosen for upload")'/>
+<br>
+<div id="selectedFileDiv">
+</div>-->
+
+
+<script>
+
+function load(star)
+{
+$(document).ready(function() {
+
+  star = tda.jsonsubmit("loadObjects", {
+      navigationExpression : ".starData.*",
+      objects : [star]
+    }
+  )[0];
+
+  if (star.name)
+    $("#starName").value = star.name;
+
+
+  if (star.starData[0].fileName) {
+    var mockFile = { name: star.starData[0].fileName, size: tda.fileSize(star.starData[0].fileName), type:"some-type" };
+  
+    myDropZone.addFile.call(myDropZone, mockFile);               
+//    myDropZone.options.addedfile.call(myDropZone, mockFile); 
+    myDropZone.options.thumbnail.call(myDropZone, mockFile, "/filedownload/"+tda.cloudLocation+"/"+star.starData[0].fileName);
+    myDropZone.options.success.call(myDropZone, mockFile); 
+  }
+
+//myDropZone.getAcceptedFiles().push(mockFile);
+
+//for (var i=0; i<myDropZone.getAcceptedFiles().length; i++) {
+//  alert(JSON.stringify(myDropZone.getAcceptedFiles().name));
+//}
+
+//  if (star.starData[0].fileName) {
+//    $("#selectedFileDiv").html(star.starData[0].fileName+" uploaded earlier");
+//  }
+//  alert("prev file name "+prevFileName);
+});
+}
+
+function store(star)
+{
+
+//    myDropZone.acceptedFiles.push(mockFile);
+
+  star.name = document.getElementById("starName").value;
+  if (!star.name)
+    star.state = "CONFIGURATION_ERROR";
+
+//alert("bool "+(myDropZone.getUploadingFiles().length==0));
+//  alert(JSON.stringify(myDropZone.getUploadingFiles()));
+
+//for (var i=0; i<myDropZone.getAcceptedFiles().length; i++) {
+//  alert(JSON.stringify(myDropZone.getAcceptedFiles()[i].name));
+//}
+/*  if (document.getElementById("finput").files[0]) {
+    // a new file has been chosen...
+
+    // deleting previous file, if any
+    if (star.starData[0].fileName) {
+      tda.fileDelete(star.starData[0].fileName);  
+      delete star.starData[0].fileName;
+    }
+
+//    tda.fileUploadAsync(finput);
+    star.starData[0].fileName = fileName;//document.getElementById("finput").files[0].name;
+  }*/
+  star.starData[0].fileName = fileName;
+}
+
+function finalize()
+{
+
+}
+
+</script>
+
+
+</body>
+</html>

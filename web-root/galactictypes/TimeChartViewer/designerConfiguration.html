@@ -1,0 +1,20 @@
+<script src="/tda.js"></script>
+<script src="/jquery-1.11.1.min.js"></script>
+Planet name: <input type="edit" id="planetName" value="Viesturs' viewer"/>
+<p>
+<script>
+
+function load(planet)
+{
+  if (planet.name)
+    document.getElementById("planetName").value = planet.name;
+}
+
+function store(planet)
+{
+  planet.name = document.getElementById("planetName").value;
+  if (!planet.name)
+    planet.state = "CONFIGURATION_ERROR";
+}
+
+</script>

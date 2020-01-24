@@ -1,0 +1,67 @@
+<script src="/webappos.js"></script>
+<script src="/jquery.js"></script>
+
+Star name: <input type="edit" id="starName" value="CSV file"/>
+<p>
+
+<div id="file_choose">
+Choose .csv file:
+<input id="finput" type="file" accept=".csv"/>
+<br>
+</div>
+
+<div id="file_name">
+Enter target .csv file name:
+<input id="ftext" type="text"/>
+<br>
+</div>
+
+<script>
+
+var cancel = null;
+
+function load(star)
+{
+  if (star.producer) {
+    file_choose.parentNode.removeChild(file_choose);
+    ftext.value = star.starData[0].fileName;
+  }
+  else {
+    file_name.parentNode.removeChild(file_name);
+    webappos.js_util.initialize_file_input(finput, star.starData[0].fileName);
+    cancel = function () { }
+  }
+
+/*  star = tda.jsonsubmit("loadObjects", {
+      navigationExpression : ".starData.*",
+      objects : [star]
+    }
+  )[0];*/
+
+  if (star.name)
+    document.getElementById("starName").value = star.name;
+
+}
+
+function store(star)
+{
+  star.name = document.getElementById("starName").value;
+  if (!star.name)
+    star.state = "CONFIGURATION_ERROR";
+
+  if (star.producer) {
+    if (star.starData[0].fileName)
+      tda.fileDelete(star.starData[0].fileName);
+    star.starData[0].fileName = ftext.value;
+  }
+  else
+    star.starData[0].fileName = webappos.js_util.upload_file_input(finput, webappos.project_id);
+
+  if (!star.starData[0].fileName)
+    star.state = "CONFIGURATION_ERROR";
+}
+
+
+</script>
+
+

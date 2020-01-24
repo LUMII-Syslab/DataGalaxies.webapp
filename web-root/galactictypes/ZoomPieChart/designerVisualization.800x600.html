@@ -1,0 +1,335 @@
+<html>
+<head>
+  <script src="/tda.js"></script>
+  <script src="/jquery-1.11.1.min.js"></script>
+    <script src="/netchart/lib/zoomcharts.js"></script>
+  <meta charset="utf-8">
+</head>
+
+
+<body>
+<span style="float:right;"><a href="license.html" target="_blank">License</a></span><br>
+  <div id="chartDiv"></div>
+
+  <script>
+
+    var chart; // global
+    var json; // global
+    var loading;
+
+    function getPieData(json, nameAttribute, valueAttribute, a2v)
+       // takes array, returns array
+    {
+
+      var retVal = [];
+      for (var i in json) {
+        var obj = {};
+        obj.name = json[i][nameAttribute];
+        if (!obj.name)
+          obj.name = "unknown";
+        obj.id = obj.name;
+        obj.value = json[i][valueAttribute];
+
+        if (!obj.value)
+          obj.value = 0.0;
+
+        if (typeof obj.value == "string") {
+          try {
+            var parsed = parseFloat(obj.value);
+            if (parsed)
+              obj.value = parsed;
+          }
+          catch(t){}
+        }
+
+        for (var attr in json[i]) {
+          if ($.isArray(json[i][attr])) { // children found...
+             var children = getPieData(json[i][attr], nameAttribute, valueAttribute, a2v);
+             if (children && children.length) {
+               if (!obj.subvalues) {
+                 obj.subvalues = [];
+/*                 if (obj.value>0.0) {
+                   obj.subvalues.push({name:"unknown sub",value:obj.value});
+                 }*/
+               }
+               for (var j in children) {
+                 // assert: children[j].value > 0.0
+                 obj.subvalues.push(children[j]);
+                 obj.value += children[j].value;
+               }
+             }
+          }
+          else {
+            if (attr in a2v) { // this attribute is needed for some filter...
+              obj[attr] = json[i][attr];
+            }
+          }
+        }
+
+        if (obj.value) {
+          retVal.push(obj);
+        }
+        if (!obj.subvalues)
+          delete obj.id;
+
+      }
+      return retVal;
+    }
+
+    function getPiePath(data, attr, value) {
+try {
+      for (var i=0; i<data.length; i++) {
+        if (data[i][attr] == value) {
+          return [ data[i].name ];
+        }
+
+        for (var chAttr in data[i]) {
+          if ($.isArray(data[i][chAttr])) {
+            var subres = getPiePath(data[i][chAttr], attr, value);
+            if (subres) {
+              subres.unshift(data[i].name);
+              return subres;
+            }
+          }
+        } 
+      }
+}
+catch(ttt) {console.log(ttt);}
+      return null;
+
+    }
+
+    function findNode(json, attr, value) {
+      for (var i in json) {
+        if (json[i][attr] == value)
+          return json[i];
+
+        for (var chAttr in json[i])
+          if ($.isArray(json[i][chAttr])) {
+            var node = findNode(json[i][chAttr], attr, value);
+            if (node)
+              return node;
+          }
+      }
+      return null;
+    }
+
+    function getPieNodeByStack(values, stack) {
+      for (var i in values) {
+        if (values[i].name == stack[0]) {
+          stack.shift();
+          if (stack.length == 0)
+            return values[i];
+          else
+            return getPieNodeByStack(values[i].subvalues, stack);
+        }
+      }
+      return null;
+    }
+
+    function collectSubtreeValues(node, attr)
+    {
+      if (!node)
+        return "";
+      var retVal = node[attr];
+      for (var chAttr in node)
+        if ($.isArray(node[chAttr]))
+          for (var i in node[chAttr])
+            retVal += ";"+collectSubtreeValues(node[chAttr][i], attr);
+      return retVal;
+    }
+
+    function refreshFilters(filters, node, f2a) {
+
+      // if node is null, then filters are cleared
+      // f2a is a map: filter->attributeName
+
+      if (!filters || (filters.length==0))
+        return;
+
+      for (var i in filters) {
+        var f = filters[i];
+
+        var needRefresh = false;
+
+        if (!node) {
+          needRefresh = f.selectedValues != "";
+          f.selectedValues = "";
+        }
+        else
+        if (f.id in f2a) {
+          var attr = f2a[f.id];
+          var jsonNode = findNode(json, attr, node[attr]);
+          var values = collectSubtreeValues(jsonNode, attr);
+          needRefresh = (values != f.selectedValues);
+          f.selectedValues = values;
+          console.log("filter "+f.id+" now is: "+f.selectedValues);
+        }
+
+        if (needRefresh) {
+
+          var dataGalaxy = tda.jsonsubmit("findObjects", {
+              isKindOf : "DataGalaxy"
+            }
+          )[0];
+
+          console.log("!!!REFRESH ", f);
+          tda.jsonsubmit("RefreshGalaxyCommand", {
+            modifiedComponent: [{reference:f.reference,selectedValues:f.selectedValues}],
+            dataGalaxy: [{reference:dataGalaxy.reference}]
+          });
+
+        }
+      }
+
+    }
+
+    function load(planet) {
+
+/*      planet = tda.jsonsubmit("loadObjects", {
+        navigationExpression: ".crossFilter.*",
+        objects: [planet]
+      })[0];*/
+
+      console.log("LOAD ", planet);
+
+      var s = tda.fileContentAsUTF8String(planet.star[0].starData[0].fileName);
+      json = JSON.parse(s);
+
+      if (!($.isArray(json)))
+        json = [json];
+
+
+
+      var f2a = {}; // filter to attribute
+      var a2v = {}; // attribute to filter value
+
+      if (planet.filtersToAttributes) {
+        var a = planet.filtersToAttributes.split(";");
+        for (var i in a) {
+          var b = a[i].split(":");
+          if (b.length>=2) {
+            f2a[b[0]] = b[1];
+          }
+        }
+      }
+
+      if (planet.crossFilter) {
+        for (var i in planet.crossFilter) {
+          if (planet.crossFilter[i].id in f2a) {
+            a2v[f2a[planet.crossFilter[i].id]] = planet.crossFilter[i].selectedValues;
+          }
+        }
+      }
+
+      var data = {
+        "values" : getPieData(json, planet.nameAttribute, planet.valueAttribute, a2v)
+      };
+
+      console.log(data);
+
+
+      loading = true;
+
+      // getting the first attr in a2v
+      var attr = null;
+      for (var a in a2v) {
+        attr = a;
+        break;
+      }
+      var value;
+      var initialPath = [""]; // initial path
+      value = a2v[attr];
+      if (value) {
+        value = value.split(";")[0];
+        initialPath = getPiePath(data.values, attr, value);
+        if (initialPath)
+         initialPath.unshift("");
+        else
+         initialPath = [""]; // not found
+      }
+      chart = new PieChart({
+          container: document.getElementById("chartDiv"),
+          height: 450,
+          data:
+          {
+              preloaded: data
+          },
+          events: {
+            onChartUpdate: function updateEvent(event){
+              if (loading) return;
+              if (!chart) return;
+              var stack = chart.getPie();
+
+              stack.shift(); // remove the first empty string
+              if (stack.length==0) {
+                refreshFilters(planet.crossFilter, null, f2a);
+              }
+              else {
+                var node = getPieNodeByStack(data.values, stack);
+                refreshFilters(planet.crossFilter, node, f2a);
+              }
+            },
+            onSelectionChange: function (event){
+              if (loading) return;
+              var selection = event.selection;
+              if (selection.length == 0) {
+                var stack = chart.getPie();
+                stack.shift(); // remove the first empty string
+                if (stack.length==0) {
+                  refreshFilters(planet.crossFilter, null, f2a);
+                }
+                else {
+                  var node = getPieNodeByStack(data.values, stack);
+                  refreshFilters(planet.crossFilter, node, f2a);
+                }
+
+                return;
+              }
+              refreshFilters(planet.crossFilter, selection[0].data, f2a);
+
+            }
+          }
+/*,
+          navigation: {
+            initialDrilldown: initialPath,
+            initialOffset:0
+          }*/
+      });
+
+
+      // setting initialPath...
+      try {
+        var stack = [];
+        for (var i in initialPath)
+           stack.push(initialPath[i]);
+        stack.shift();
+        var node = getPieNodeByStack(data.values, stack);
+
+
+        if (!node)
+          ; // do nothing
+        else
+        if (node.id) { // node is not leaf
+          var s = chart.setPie(initialPath, 0);
+        }
+        else { // node is leaf
+          var leaf = initialPath.pop();
+          var s = chart.setPie(initialPath, 0);
+          s.selection([]);
+          node.id = node.name;
+          chart.reloadData();
+          s.selection([leaf]);
+        }
+      } 
+      catch(ttt) {console.log(ttt);}
+
+      setTimeout(function() {
+        loading = false;
+      }, 500);
+
+    } // load()
+  </script>
+
+</body>
+</html>

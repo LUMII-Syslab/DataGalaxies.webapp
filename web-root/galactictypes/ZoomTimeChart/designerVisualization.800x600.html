@@ -1,0 +1,197 @@
+<html>
+<head>
+  <script src="/tda.js"></script>
+  <script src="/jquery-1.11.1.min.js"></script>
+  <script src="/netchart/lib/zoomcharts.js"></script>
+  <script src="/js-date-format.min.js"></script>
+  <meta charset="utf-8">
+</head>
+
+
+<body>
+<span style="float:right;"><a href="license.html" target="_blank">License</a></span><br>
+  <div id="chartDiv" style="width:100%; height:450;"></div>
+
+  <script>
+    var chart = null;
+    var loading = false;
+
+    function string2unixtime(s)
+    {
+        if (!s)
+          return null;
+        var sdate = s.split("-");
+        if (sdate.length==3) {
+          return new Date(parseInt(sdate[0]),parseInt(sdate[1])-1,parseInt(sdate[2])).getTime()/1000;
+        }
+        else
+          return null;
+    }
+
+    function refreshFilters(filters, sFrom, sTo) {
+      if (!filters)
+        return;
+      for (var i in filters) {
+        var f = filters[i];
+        var needRefresh = false;
+
+        if ((f.fromDate != sFrom) || (f.toDate != sTo)) {
+          f.fromDate = sFrom;
+          f.toDate = sTo;
+          needRefresh = true;
+        }
+
+        if (needRefresh) {
+
+          var dataGalaxy = tda.jsonsubmit("findObjects", {
+              isKindOf : "DataGalaxy"
+            }
+          )[0];
+
+          tda.jsonsubmit("RefreshGalaxyCommand", {
+            modifiedComponent: [{reference:f.reference,fromDate:f.fromDate,toDate:f.toDate}],
+            dataGalaxy: [dataGalaxy]
+          });
+
+        }
+
+      }
+    }
+
+    function load(planet) {
+try{
+      try {
+        planet = tda.jsonsubmit("loadObjects", {
+          navigationExpression: ".crossFilter.*",
+          objects: [planet]
+        })[0];
+      }
+      catch(t) {
+        // no filters, or error
+      }
+
+      var s = tda.fileContentAsUTF8String(planet.star[0].starData[0].fileName);
+      var json;
+      try {
+        json = JSON.parse(s);
+      }
+      catch(tt) {
+        alert("JSON parse error "+t);
+      }
+      var mydata = {
+//        "dataLimitFrom":1279408157,
+//        "dataLimitTo":1384253671,
+         "unit":"d",
+         "data":[]
+      };
+
+      mydata.data = [];
+      for (var i in json) {
+        var sdate = json[i][planet.dateAttributeName].split("-");
+        if (sdate.length==3) {
+          var date = new Date(parseInt(sdate[0]),parseInt(sdate[1])-1,parseInt(sdate[2]));
+          mydata.data.push( [ date.getTime()/1000, json[i][planet.valueAttributeName] ] );
+        }
+      }
+
+
+      loading = true;
+
+      var leftBound = -1;
+      var rightBound = -1;
+      if (planet.crossFilter) {
+        for (var i in planet.crossFilter) {
+          var f = planet.crossFilter[i];
+          var a = string2unixtime(f.fromDate);
+          var b = string2unixtime(f.toDate);
+          if ((leftBound == -1) || (a>leftBound))
+            leftBound = a;
+          if ((rightBound == -1) || (b<rightBound))
+            rightBound = b;
+        }
+      }
+
+      var initialPeriod = " > ";
+      if (leftBound != -1)
+        initialPeriod = (leftBound*1000) + initialPeriod;
+      if (rightBound != -1)
+        initialPeriod += (rightBound*1000);
+
+      if (leftBound == -1)
+        leftBound = null;
+      else
+        leftBound *= 1000;
+
+      if (rightBound == -1)
+        rightBound = null;
+      else
+        rightBound *= 1000;
+
+      var settings = {
+          container: document.getElementById("chartDiv"),
+          area:{
+                    initialDisplayPeriod: initialPeriod
+//,
+//                    initialDisplayUnit: "d"
+          },
+          data:
+          {
+              units:["d"],
+              timestampInSeconds: true,
+              preloaded: mydata
+          },
+          events: {
+            onChartUpdate: function updateEvent(event){
+              if (!chart || loading)
+                return;
+              var from = event.timeStart;
+              var to = event.timeEnd;
+              var sFrom = new Date(from).format("YYYY-MM-DD");
+              var sTo = new Date(to).format("YYYY-MM-DD");
+              refreshFilters(planet.crossFilter, sFrom, sTo);
+            }
+          }/*,
+          interaction:{
+             scrolling:{
+                 limitFrom: leftBound,
+                 limitTo: rightBound,
+                 limitMode: "block" // one of null, "scrollBack", "block"
+             }
+          }*/
+      };
+
+      if (initialPeriod==" > ")
+        delete settings.area;
+
+      var chart = new TimeChart(settings);
+
+      setTimeout(function() {
+        loading = false;
+      }, 1500);
+/*      if (planet.crossFilter && (planet.crossFilter.length>0) && planet.crossFilter[0].selectedValues) {
+        var values = planet.crossFilter[0].selectedValues.split(";");
+        var ss = {};
+        for (var i in values)
+          ss[values[i]] = 1;
+
+        console.log(ss);
+        var json2 = [];
+        if ($.isArray(json))
+          for (var i in json)
+            filterValues(json[i], ss, json2);
+        json = json2;
+        console.log(json);
+      }*/
+
+//      s = JSON.stringify(json, null, 2);
+//      outputDiv.innerHTML = s.split("\n").join("<br>").split(" ").join("&nbsp;");
+}
+catch(t)
+{
+  console.log(t.stack);
+}
+    }
+  </script>
+
+</body>
+</html>

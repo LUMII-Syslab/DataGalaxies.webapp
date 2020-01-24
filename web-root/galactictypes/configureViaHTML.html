@@ -1,0 +1,304 @@
+<!doctype html>
+<!--
+      This file is used by the DataGalaxiesApp.configureViaHTML web call.
+
+      When some DataGalaxy component specifies this URI as a value for the
+      designerConfigurationURI or endUserConfigurationURI, this
+      helper file is displayed. This file will load the corresponding
+      galaxy component into the galaxyComponent JavaScript object and
+      will load the file
+        designerConfigurationFor<GalacticTypeName>.html
+      or
+        endUserConfigurationFor<GalacticTypeName>.html
+      Either of these files should implement the load() and store() functions
+      that will be called when necessary. The argument passed will be
+      a galaxy component object, parsed into JavaScript from TDA JSON syntax.
+
+      This file is called from the configureViaHTML function of the Java class DataGalaxy.
+      The URL parameters passed are:
+      * mode=designer or mode=endUser
+      * fileName=html-file-name-to-display
+      * id=galaxy-component-id
+      * frameReference=frame-reference-to-close-the-frame-on-cancel
+  -->
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="/jquery.js"></script>
+  <script src="/dojo/dojo.js" data-dojo-config="async:0"></script>
+  <script type="text/javascript" src="/webappos.js"></script>                
+
+
+<script>
+
+function GetURLParameter(name) {
+  return decodeURIComponent((new RegExp('[?|&]' + name + '=' + '([^&;]+?)(&|#|;|$)').exec(location.search)||[,""])[1].replace(/\+/g, '%20'))||null
+} // [source: http://stackoverflow.com/questions/11582512/how-to-get-url-parameters-with-javascript]
+
+if ( typeof String.prototype.endsWith != 'function' ) {
+  String.prototype.endsWith = function( str ) {
+    return this.substring( this.length - str.length, this.length ) === str;
+  }
+};
+
+var galaxyComponent = null;
+  // a JavaScript object conforming to TDA JSON syntax
+
+function closeButtonToFooter()
+  // this function will be called if the inner html does not contain the cancel function
+  // (for cancelling the configuration)
+{
+  if ("designer"==GetURLParameter('mode')) {
+    $('#footer').html(
+      "<div align='right'><input type='button' value='Close' onClick='onOK();'/></div>");
+  }
+}
+
+$(document).ready(function() {
+
+
+  // loading configuration into the galaxyComponent object...
+  var foundComponents = webappos.webcall_and_wait("findObjects", {
+      isKindOf : "GalaxyComponent",
+      id : GetURLParameter("id")
+    }
+  );
+
+  if (!foundComponents || (foundComponents.length==0))
+    return;
+
+  galaxyComponent = foundComponents[0];
+
+  galaxyComponent = webappos.webcall_and_wait("loadObjects", {
+      navigationExpressions : [
+        ".*",
+        // adding the corresponding star data (for stars)
+        ".starData.*",
+        // adding the corresponding star and star data (for planets)
+        ".star.*",
+        ".star.*.starData.*",
+        ".star.*.planet.*",
+        // adding the corresponding cross-filters (for planets and stellar winds)
+        ".crossFilter.*",
+        // adding the corresponding source and target stars and their star data (for stellar winds)
+        ".source.*",
+        ".target.*",
+        ".producer.*",
+        ".source.*.starData.*",
+        ".target.*.starData.*",
+      ],
+      object : galaxyComponent
+    }
+  );
+
+
+  delete galaxyComponent.dataGalaxy;
+  delete galaxyComponent.refreshGalaxyCommand;
+
+  if (galaxyComponent.crossFilter)
+    for (var i in galaxyComponent.crossFilter) {
+      delete galaxyComponent.crossFilter[i].stellarWind;
+      delete galaxyComponent.crossFilter[i].planet;
+    }
+
+
+  if (!galaxyComponent.name)
+    galaxyComponent.name = "";
+
+
+
+  if ("designer"==GetURLParameter('mode')) {
+    $('#footer').html(
+      "<input type='button' value='OK' onClick='onOK();'/>&nbsp;"+
+      "<input type='button' value='Cancel' onClick='onCancel();'/>");
+  }
+
+
+  configFrameDiv.style.height=document.body.parentElement.clientHeight-footer.offsetHeight+"px";
+
+
+/*variant:
+      if (configFrame.parent && configFrame.parent.innerHeight) {
+        configFrameDiv.style.height = configFrame.parent.innerHeight-footer.offsetHeight+"px";
+      }
+      else {
+        configFrameDiv.style.height=document.body.parentElement.clientHeight-footer.offsetHeight+"px";
+      }*/
+
+
+  $("#configFrame").attr("src", encodeURI(GetURLParameter('fileName')));
+
+
+  $("#configFrame").load(
+    function() {
+      if (configFrame.contentWindow) {
+        configFrame.contentWindow.eval("if (load) load("+JSON.stringify(galaxyComponent)+"); if ((typeof cancel == 'undefined') && (typeof cancelAsync == 'undefined')) window.parent.closeButtonToFooter();");
+      }
+      else { // IE
+        configFrame.frameElement.contentWindow.eval("if (load) load("+JSON.stringify(galaxyComponent)+"); if ((typeof cancel == 'undefined') && (typeof cancelAsync == 'undefined')) window.parent.closeButtonToFooter();");
+      }
+    }
+  );
+  // the load() function must be implemented in the inner html file
+
+
+});
+
+var finalized = false;
+
+function debugFilters()
+{
+  var ff = webappos.webcall_and_wait("findObjects", {
+      isKindOf : "CrossFilter"
+    }
+  );
+
+  var ff = webappos.webcall_and_wait("loadObjects", {
+      navigationExpression: ".*.*",
+      objects : ff
+    }
+  );
+  console.log("debugFilters ",ff);
+}
+
+/*var runGalaxy = null;
+var w = window;
+while (w && (!runGalaxy)) {
+  runGalaxy = w.runGalaxy;
+  w = w.parent;
+};*/
+
+function onOK()
+{
+  finalized = true;
+
+  galaxyComponent.state = "CONFIGURATION_OK";
+
+  var async = false;
+
+  var fAfter = function() {
+
+    if (galaxyComponent.producer) {
+      for (var i in galaxyComponent.producer) {
+        if (galaxyComponent.producer[i].state == "RUN_OK")
+           galaxyComponent.producer[i].state = "CONFIGURATION_OK";
+      }
+    }
+//    console.log("onOK1", galaxyComponent);
+//    debugFilters();
+    webappos.webcall_and_wait("storeObjects", [galaxyComponent]);  
+
+//    console.log("onOK2", galaxyComponent);
+//    debugFilters();
+
+    let ev = new webmem.CloseFrameRequestedEvent();
+    ev.setForce(true);
+    ev.linkFrame(webmem[parseInt(GetURLParameter('frameReference'))]);
+    webmem.submit(ev);
+
+    var dataGalaxy = webappos.webcall_and_wait("findObjects", {
+        isKindOf : "DataGalaxy"
+      }
+    )[0];
+
+    let cmd = new webmem.RefreshGalaxyCommand();
+    cmd.setModifiedComponent(webmem[galaxyComponent.reference]);
+    cmd.setDataGalaxy(webmem[dataGalaxy.reference]);
+    webmem.submit(cmd);
+  };
+
+  galaxyComponent.state = "CONFIGURATION_OK";
+
+
+  if (configFrame.contentWindow) {
+    if (configFrame.contentWindow.store)
+      configFrame.contentWindow.store(galaxyComponent);
+      // the store() function must be implemented in the inner html file
+    else
+    if (configFrame.contentWindow.storeAsync) {
+      async = true;
+      configFrame.contentWindow.storeAsync(galaxyComponent, fAfter);
+    }
+  }
+  else { // IE
+    if (configFrame.frameElement.contentWindow.store)
+      configFrame.frameElement.contentWindow.store(galaxyComponent);
+      // the store() function must be implemented in the inner html file
+    else
+    if (configFrame.frameElement.contentWindow.storeAsync) {
+      async = true;
+      configFrame.frameElement.contentWindow.storeAsync(galaxyComponent, fAfter);
+    }
+  }
+
+  if (!async)
+    fAfter();
+}
+
+function onCancel()
+{
+  if (finalized)
+    return;
+  finalized = true;
+  var fAfter = function() {
+    let ev = new webmem.CloseFrameRequestedEvent();
+    ev.setForce(true);
+    ev.linkFrame(webmem[parseInt(GetURLParameter('frameReference'))]);
+    webmem.submit(ev);
+  };
+
+  var async = false;
+
+  if (configFrame.contentWindow) {
+    if (configFrame.contentWindow.cancel)
+      configFrame.contentWindow.cancel();
+      // the cancel() function must be implemented in the inner html file
+    else
+    if (configFrame.contentWindow.cancelAsync) {
+      async = true;
+      configFrame.contentWindow.cancelAsync(fAfter);
+    }
+  }
+  else { // IE
+    if (configFrame.frameElement.contentWindow.cancel)
+      configFrame.frameElement.contentWindow.cancel();
+      // the cancel() function must be implemented in the inner html file
+    else
+    if (configFrame.frameElement.contentWindow.cancelAsync) {
+      async = true;
+      configFrame.frameElement.contentWindow.cancelAsync(fAfter);
+    }
+  }
+
+  if (!async)
+    fAfter();
+
+}
+
+function finalize() {
+  if (!finalized) {
+    onCancel();
+  }
+}
+
+
+function bodyResized() {
+  configFrameDiv.style.height=document.body.parentElement.clientHeight-footer.offsetHeight+"px";
+};
+
+
+
+</script>
+
+</head>
+<body id="body" style="margin:0; height:100%;" onresize="bodyResized();">
+
+<div id="configFrameDiv" style="border:0;padding:0;margin:0;overflow-x: hidden; overflow-y: hidden;">
+<iframe id="configFrame" style="width:100%; height:100%; margin:0; border:0; padding:0;">
+</iframe>
+</div>
+<div id="footer" style="width:100%; padding:0; padding-bottom:0;">
+</div>
+
+</body>
+</html>

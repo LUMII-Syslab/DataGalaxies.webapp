@@ -1,0 +1,306 @@
+<html>
+
+<head>
+  <link rel="stylesheet" href="/dijit/themes/claro/claro.css" media="screen">
+  <link rel="stylesheet" href="/dojox/grid/resources/Grid.css" media="screen">
+  <link rel="stylesheet" href="/dojox/grid/resources/claroGrid.css" media="screen">
+
+  <script src="/jquery.js"></script>
+  <link href="../css/jquery-ui.min.css" rel="stylesheet">
+  <script src="../jquery-ui.js"></script>
+
+  <script type="text/javascript" src="/webappos.js"></script>
+
+</head>
+
+
+<script>
+function GetURLParameter(name) {
+  return decodeURIComponent((new RegExp('[?|&]' + name + '=' + '([^&;]+?)(&|#|;|$)').exec(location.search)||[,""])[1].replace(/\+/g, '%20'))||null
+} // [source: http://stackoverflow.com/questions/11582512/how-to-get-url-parameters-with-javascript]
+
+  function bodyResized() {
+    $("#gridDiv2").css("height", (document.body.parentElement.clientHeight - 50) + "px");
+  };
+</script>
+
+<body class="claro" onresize="bodyResized();">
+
+  <div id="gridDiv2" style="border:0;padding:0;margin:0;overflow-x: hidden; background-color:#e3ebf3" class="claro">
+    <div id="gridDiv" style="border:0;padding:0;margin:0;overflow-x: hidden; overflow-y: hidden;" class="claro">
+    </div>
+  </div>
+
+  <script>
+    var grid;
+    var store;
+    var currentRow = null;
+    var newRowCreated = false;
+    var rc = null; // webmem (repository) object corresponding to the currentRow
+
+    function enableDisable() {
+      if (!window.deployButton) {
+	setTimeout(enableDisable, 0);
+	return;
+      }	
+      deployButton.set('disabled', (currentRow == null));
+      renameButton.set('disabled', (currentRow == null));
+      editButton.set('disabled', (currentRow == null));
+      deleteButton.set('disabled', (currentRow == null));
+    }
+
+    function newRunConfiguration() {
+      var result = webappos.webcall_and_wait("insertMMD", "attr RunConfiguration.name:string;");
+      //    alert("insert mmd result="+result);
+
+
+      rc = new webmem.RunConfiguration();
+      rc.setName("New Run Configuration");
+      rc.setDescription("");
+      rc.linkDataGalaxy(webmem.DataGalaxy.getFirstObject());
+
+
+      currentRow = store.newItem({
+        id: rc.reference,
+        name: "New run configuration"
+      });
+
+      grid.selection.setSelected(grid.rowCount, true);
+      grid.render();
+
+      renameDialogName.set('value', rc.name);
+      renameDialogDesc.set('value', rc.description);
+      newRowCreated = true;
+      renameDialog.show();
+
+      enableDisable();
+    }
+
+    function renameCurrentRunConfiguration() {
+      if (currentRow !== null) {
+        var r = null;
+
+        try {
+          r = parseInt(store.getValue(currentRow, "id", null));
+        } catch (t) {
+          return;
+        }
+
+
+        rc = webmem[r];
+
+        if (!rc)
+          return;
+
+        renameDialogName.set('value', rc.name);
+        renameDialogDesc.set('value', rc.description);
+        renameDialog.show();
+      } // end if
+    }
+
+    function editCurrentRunConfiguration() {
+
+      var r = null;
+
+      try {
+        r = parseInt(store.getValue(currentRow, "id", null));
+      } catch (t) {
+        return;
+      }
+
+
+      rc = webmem[r];
+
+      if (!rc)
+        return;
+
+
+      var frame = new webmem.Frame();
+      frame.setCaption("Edit galaxy run configuration");
+      frame.setLocation("modalpopup");
+      frame.setOnCloseFrameRequestedEvent(
+      "staticjava:lv.lumii.datagalaxies.DataGalaxiesApp#onCloseFrameRequestedEvent");
+      frame.setContentURI("html:galactictypes/editRunConfiguration.html?frameReference=" + frame.reference +
+        "&runConfigurationReference=" + r);
+
+      var cmd = new webmem.AttachFrameCommand();
+      cmd.linkFrame(frame);
+      webmem.submit(cmd);
+    }
+
+    function deleteCurrentRunConfiguration() {
+      if (currentRow) {
+
+        var r = null;
+        try {
+          r = parseInt(store.getValue(currentRow, "id", null));
+        } catch (t) {
+          return;
+        }
+
+        webmem[r].delete();
+
+        store.deleteItem(currentRow);
+        currentRow = null;
+        enableDisable();
+      }
+    }
+
+    function closeMyFrame() {
+      let ev = new webmem.CloseFrameRequestedEvent();
+      ev.setForce(true);
+      ev.linkFrame(webmem[parseInt(GetURLParameter('frameReference'))]);
+      webmem.submit(ev);
+
+    }
+
+    function deployCurrentRunConfiguration() {
+      if (!currentRow)
+        return;
+
+      var r = null;
+      try {
+        r = parseInt(store.getValue(currentRow, "id", null)) + "";
+      } catch (t) {
+        return;
+      }
+
+      var result = webappos.webcall_and_wait("deployGalaxyForEndUsers", r);
+      if (result) {
+        if (result.result)
+          alert("The galaxy deployed successfully.");
+        else
+          alert("Error deploying the galaxy: " + result.errorMessage);
+      } else
+        alert("There was an error while deploying the data galaxy.");
+
+      closeMyFrame();
+    }
+
+    require(['dojo/_base/lang', 'dojox/grid/DataGrid', 'dojo/data/ItemFileWriteStore', 'dojox/grid/cells/dijit',
+        'dojo/on', 'dojo/dom', 'dojo/domReady!'
+      ],
+      function (lang, DataGrid, ItemFileWriteStore, cells, on, dom) {
+
+        var data = {
+          identifier: "id",
+          items: []
+        };
+
+        var rcArr = webappos.webcall_and_wait("findObjects", {
+          isKindOf: "RunConfiguration"
+        });
+        if (rcArr) {
+          for (var i = 0; i < rcArr.length; i++) {
+            data.items.push(lang.mixin({
+              id: i + 1
+            }, {
+              id: rcArr[i].reference,
+              name: rcArr[i].name
+            }));
+          }
+        };
+
+
+        store = new ItemFileWriteStore({
+          data: data
+        });
+
+
+        var layout = [
+          [{
+              'name': 'ID',
+              'field': 'id',
+              width: '6em'
+            },
+            {
+              'name': 'Run configuration name',
+              'field': 'name',
+              width: '100%'
+            }
+          ]
+        ];
+
+        grid = new DataGrid({
+          id: 'grid',
+          store: store,
+          rowSelector: true,
+          selectionMode: 'single',
+          structure: layout,
+          //        autoWidth: true,
+          autoHeight: true
+          //        rowSelector: '20px'
+        });
+
+        on(grid, "Selected", function (inRowIndex) {
+          currentRow = grid.getItem(inRowIndex);
+          enableDisable();
+        });
+
+
+        grid.placeAt("gridDiv");
+        grid.startup();
+      });
+
+    require(["dojo/parser", "dijit/form/Button", "dojo/domReady!"],
+      function (parser, Button) {
+        parser.parse();
+        bodyResized();
+        enableDisable();
+      });
+
+    function onRenameDialogOK() {
+      rc.setName(renameDialogName.value);
+      rc.setDescription(renameDialogDesc.value);
+      store.setValue(currentRow, 'name', rc.name);
+      if (newRowCreated)
+        editCurrentRunConfiguration();
+      newRowCreated = false;
+      renameDialog.hide();
+    }
+  </script>
+
+  <div style="position:absolute; margin-top:-40; top:100%;">
+    <button data-dojo-id="deployButton" class='claro' type="button" data-dojo-type="dijit/form/Button"
+      onClick="deployCurrentRunConfiguration();">Deploy</button>
+    &nbsp;&nbsp;&nbsp;
+    <button data-dojo-id="newButton" class='claro' type="button" data-dojo-type="dijit/form/Button"
+      onClick="newRunConfiguration();">New</button>
+    <button data-dojo-id="renameButton" class='claro' type="button" data-dojo-type="dijit/form/Button"
+      onClick="renameCurrentRunConfiguration();">Rename...</button>
+    <button data-dojo-id="editButton" class='claro' type="button" data-dojo-type="dijit/form/Button"
+      onClick="editCurrentRunConfiguration();">Edit...</button>
+    <button data-dojo-id="deleteButton" class='claro' type="button" data-dojo-type="dijit/form/Button"
+      onClick="deleteCurrentRunConfiguration();">Delete</button>
+    &nbsp;&nbsp;&nbsp;
+    <button data-dojo-id="cancelButton" style="margin-right:0" class='claro' type="button"
+      data-dojo-type="dijit/form/Button" onClick="closeMyFrame();">
+      Cancel
+    </button>
+
+  </div>
+
+  <div data-dojo-type="dijit/Dialog" data-dojo-id="renameDialog" title="Run configuration name">
+    <table class="dijitDialogPaneContentArea">
+      <tr>
+        <td><label for="name">Name:</label></td>
+        <td><input data-dojo-type="dijit/form/TextBox" name="name" data-dojo-id="renameDialogName"></td>
+      </tr>
+      <tr>
+        <td><label for="desc">Description:</label></td>
+        <td><input data-dojo-type="dijit/form/TextBox" name="desc" data-dojo-id="renameDialogDesc"></td>
+      </tr>
+    </table>
+
+    <div class="dijitDialogPaneActionBar">
+      <button data-dojo-type="dijit/form/Button" type="button" data-dojo-props="onClick:onRenameDialogOK"
+        id="ok">OK</button>
+      <button data-dojo-type="dijit/form/Button" type="button"
+        data-dojo-props="onClick:function(){if (newRowCreated) deleteCurrentRunConfiguration(); newRowCreated=false; renameDialog.hide();}"
+        id="cancel">Cancel</button>
+    </div>
+  </div>
+
+</body>
+
+</html>

@@ -1,0 +1,78 @@
+<html>
+<head>
+<script src="/tda.js"></script>
+<!--script src="/jquery-1.11.1.min.js"></script-->
+</head>
+<body>
+
+<b>Stellar wind name:</b> <input type="edit" id="stWindName"/><p>
+<b>JSON attribute name to consider:</b> <input type="edit" id="idAttributeName" value="id"/><p>
+<b>JSON attribute name for children:</b> <input type="edit" id="childrenAttributeName" value="children"/><p>
+<b>JavaScript function for checking the parent-child relationship:</b><br>
+<textarea id="funcBody" style="width:100%; height:250px;">
+function isParentOf(parentId,childId)
+{
+  return false;
+}
+</textarea>
+
+<script>
+
+var stellarWind = null;
+
+
+
+function load(stWind)
+{
+  if (stWind.name)
+    document.getElementById("stWindName").value = stWind.name;
+  if (stWind.idAttributeName)
+    document.getElementById("idAttributeName").value = stWind.idAttributeName;
+  if (stWind.childrenAttributeName)
+    document.getElementById("childrenAttributeName").value = stWind.childrenAttributeName;
+  if (stWind.isParentOf)
+    document.getElementById("funcBody").innerHTML = stWind.isParentOf;
+
+  stellarWind = stWind;
+  loadCalled = true;
+
+}
+
+function store(stWind)
+{
+  stWind.name = document.getElementById("stWindName").value;
+  if (!stWind.name) {
+    stWind.state = "CONFIGURATION_ERROR";
+    fAfter();
+    return;
+  }
+
+  stWind.idAttributeName = document.getElementById("idAttributeName").value;
+  stWind.childrenAttributeName = document.getElementById("childrenAttributeName").value;
+  stWind.isParentOf = document.getElementById("funcBody").value;
+
+  if (!stWind.idAttributeName || !stWind.childrenAttributeName || !stWind.isParentOf) {
+    stWind.state = "CONFIGURATION_ERROR";
+    fAfter();
+    return;
+  }
+
+
+  if ((!stWind.target[0].starData) || (stWind.target[0].starData.length==0)) {
+    tda.jsonsubmit("putGalacticTypeIntoMetamodel", "JSON file");
+    starData = tda.jsonsubmit("JSON file", {
+                  fileName:stWind.name+"result.json",
+               });
+    stWind.target[0].starData = [starData];
+    stWind.target[0].state = "CONFIGURATION_OK";
+  }
+
+  if (!stWind.target[0].starData[0].fileName)
+    stWind.target[0].starData[0].fileName = stWind.name+"result.json";
+}
+
+</script>
+
+</body>
+</html>
+

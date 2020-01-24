@@ -1,0 +1,6 @@
+findObjects=staticjava:lv.lumii.datagalaxies.BaseActions_webcalls#findObjects
+loadObjects=staticjava:lv.lumii.datagalaxies.BaseActions_webcalls#loadObjects
+storeObjects=staticjava:lv.lumii.datagalaxies.BaseActions_webcalls#storeObjects
+deleteObjects=staticjava:lv.lumii.datagalaxies.BaseActions_webcalls#deleteObjects
+replicateObjects=staticjava:lv.lumii.datagalaxies.BaseActions_webcalls#replicateObjects
+insertMMD=staticjava:lv.lumii.datagalaxies.BaseActions_webcalls#insertMMD

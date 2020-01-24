@@ -1,0 +1,239 @@
+<html>
+<head>
+<script src="/tda.js"></script>
+<!--script src="/jquery-1.11.1.min.js"></script-->
+</head>
+<body>
+<span style="float:right;"><a href="license.html" target="_blank">License</a></span>
+Stellar wind name: <input type="edit" id="stWindName" value="OpenRefine"/>
+
+<iframe id="myiframe" width="100%" height="740" src="http://localhost:4444/" onload="window.frameLoaded=true;if(window.loadCalled)performLoad();"></iframe>
+
+<script>
+
+var domain = location.protocol+'//'+location.hostname+(location.port ? ':'+location.port: '');
+
+var frameLoaded = false;
+var loadCalled = false;
+var stellarWind = null;
+
+function performRedo()
+{
+  document.getElementById('myiframe').onload = function () {};
+
+  if (stellarWind.redoJson) {
+
+    var win = document.getElementById('myiframe').contentWindow;
+
+    setTimeout(function () {
+    win.postMessage(
+     "TDAMESSAGE:"+
+        "function TDA_GetURLParameter(name) {"+
+        "  return decodeURIComponent((new RegExp('[?|\&]' + name + '=' + '([^\&;]+?)(\&|#|;|$)').exec(location.search)||[,\"\"])[1].replace(/\\+/g, '%20'))||null"+
+        "}"+
+        "TDA_WaitForCondition("+
+        "  function(){console.log(TDA_FindElementByTagName('a', 'Undo / Redo ')); return TDA_FindElementByTagName('a', 'Undo / Redo ');},"+
+        "  function(){"+
+        "    var el = TDA_FindElementByTagName('a', 'Undo / Redo ');"+
+        "    TDA_FireEvent(el, 'click');"+
+        "    el = TDA_FindElementByClassName('button-pill-right', 'Apply');"+
+        "    TDA_FireEvent(el, 'click');"+
+        "    TDA_WaitForCondition("+
+        "      function(){return TDA_FindElementByClassName('history-operation-json');},"+
+        "      function(){"+
+        "        var el = TDA_FindElementByClassName('history-operation-json');"+
+        "        el.value = '"+stellarWind.redoJson.split("\\").join("\\\\").split('\"').join("\\\"").split('\'').join("\\\'")+"';"+
+        "        var b = TDA_FindElementByClassName('button', 'Perform Operations');"+
+        "        TDA_FireEvent(b, 'click');"+
+        "      }"+
+        "    );"+
+        "  }"+
+        ");",
+     "http://localhost:4444"
+    );
+    },
+    200);
+  }
+}
+
+
+function performLoad()
+{
+  document.getElementById('myiframe').onload = performRedo;
+  // Uploading file to OpenRefine...
+
+  var win = document.getElementById('myiframe').contentWindow;
+
+  setTimeout(function () {
+  win.postMessage(
+   "TDAMESSAGE:"+
+   "  function q(){"+
+   "    TDA_FireEvent(TDA_FindElementByClassName('action-area-tab'),'click');"+
+   "    TDA_FireEvent(document.getElementsByClassName('create-project-ui-source-selection-tab')[1], 'click');"+
+   "    document.getElementsByClassName('default-importing-web-url')[0].value = encodeURI('"+domain+"/filedownload/"+tda.cloudLocation+"/"+stellarWind.source[0].starData[0].fileName+"?access_token="+tda.getAccessToken("filedownload")+"');"+
+   "    TDA_FireEvent(document.getElementsByClassName('button-primary')[1], 'click');"+
+   "    function f(){"+
+   "      var parseAs = TDA_FindElementByClassName('default-importing-parsing-control-panel-format', 'Line-based text files');"+
+   "      TDA_FireEvent(parseAs, 'click');"+
+   "      setTimeout(ff,200);"+
+   "    };"+
+/*   "    function f2(){"+
+           "var els=document.getElementsByName('column-separator');"+
+           "if ((!els) || (els.length==0)) {"+
+           "  setTimeout(f,10);"+
+           "  return;"+
+           "}"+
+           "TDA_FireEvent(els[els.length-1], 'click');"+
+           "var label = TDA_FindElementByTagName('label','custom');"+
+           "TDA_FireEvent(label, 'click');"+
+           "document.getElementsByClassName('lightweight')[0].value=' ';"+
+           "TDA_FireEvent(document.getElementsByClassName('lightweight')[0], 'change');"+
+           "setTimeout(ff,500);"+
+         "};"+*/
+         "function ff(){"+
+           "var els=document.getElementsByTagName('button');"+
+           "for (var i=0; i<els.length;i++) {"+
+           "  if (els[i].innerHTML.substr(0,14)=='Create Project')"+
+           "    break;"+
+           "}"+
+           "if (i>=els.length) {"+
+           "  setTimeout(ff, 10);"+
+           "  return;"+
+           "}"+
+           "setTimeout(function(){TDA_FireEvent(els[i], 'click');}, 100);"+
+
+         "};"+
+   "    TDA_WaitForCondition("+
+   "      function(){return TDA_FindElementByClassName('default-importing-parsing-control-panel-format', 'Line-based text files');},"+
+   "      function(){setTimeout(f,500);}"+
+   "    );"+
+   "  };"+
+   "  TDA_WaitForCondition("+
+   "    function(){var x = document.getElementsByClassName('action-area-tab'); return (x)&&(x.length>0);},"+
+   "    q"+
+   "  );",
+   "http://localhost:4444"
+  );
+  },
+  200);
+
+}
+
+function load(stWind)
+{
+  if (stWind.name)
+    document.getElementById("stWindName").value = stWind.name;
+  stellarWind = stWind;
+  loadCalled = true;
+
+  if (!stWind.source[0].starData || (stWind.source[0].starData.length==0) ||
+      !stWind.source[0].starData[0].fileName) {
+    alert("In order to configure OpenRefine, the source star must be configured properly.");
+    location = "about:blank";
+    return;
+  }
+
+  if (frameLoaded)
+    performLoad();
+}
+
+function storeAsync(stWind, fAfter)
+{
+  stWind.name = document.getElementById("stWindName").value;
+  if (!stWind.name) {
+    stWind.state = "CONFIGURATION_ERROR";
+    fAfter();
+    return;
+  }
+
+  if ((!stWind.target[0].starData) || (stWind.target[0].starData.length==0)) {
+    tda.jsonsubmit("putGalacticTypeIntoMetamodel", "JSON file");
+    starData = tda.jsonsubmit("JSON file", {
+                  fileName:stWind.name+"result.json",
+               });
+    stWind.target[0].starData = [starData];
+    stWind.target[0].state = "CONFIGURATION_OK";
+  }
+
+  if (!stWind.target[0].starData[0].fileName) {
+    stWind.target[0].starData[0].fileName = stWind.name+"result.json";
+    stWind.target[0].state = "CONFIGURATION_OK";
+  }
+
+  var listener = function(event){
+    if ((event.data) && (event.data.substr(0,9)=="REDOJSON:")) {
+      console.log(event.data.substr(9));
+      stWind.redoJson = event.data.substr(9).replace(new RegExp('\r?\n','g'),' ');
+      if (stWind.target[0].starData) {
+
+      }
+      fAfter();
+    }
+  }
+  if (window.addEventListener){
+    addEventListener("message", listener, false);
+  } else {
+    attachEvent("onmessage", listener);
+  }
+
+  var domain = location.protocol+'//'+location.hostname+(location.port ? ':'+location.port: '');
+
+  win = document.getElementById('myiframe').contentWindow;
+  win.postMessage(
+    "TDAMESSAGE:"+
+      "function TDA_GetURLParameter(name) {"+
+      "  return decodeURIComponent((new RegExp('[?|\&]' + name + '=' + '([^\&;]+?)(\&|#|;|$)').exec(location.search)||[,\"\"])[1].replace(/\\+/g, '%20'))||null"+
+      "}"+
+      "TDA_WaitForCondition("+
+      "  function(){console.log(TDA_FindElementByTagName('a', 'Undo / Redo ')); return TDA_FindElementByTagName('a', 'Undo / Redo ');},"+
+      "  function(){"+
+      "    var el = TDA_FindElementByTagName('a', 'Undo / Redo ');"+
+      "    TDA_FireEvent(el, 'click');"+
+      "    el = TDA_FindElementByClassName('button-pill-left', 'Extract');"+
+      "    TDA_FireEvent(el, 'click');"+
+      "    TDA_WaitForCondition("+
+      "      function(){return TDA_FindElementByClassName('history-operation-json');},"+
+      "      function(){"+
+      "        var el = TDA_FindElementByClassName('history-operation-json');"+
+      "        parent.postMessage('REDOJSON:'+el.value,'"+domain+"');"+
+               // deleting the openrefine project...
+      "        var xhr = new XMLHttpRequest();"+
+      "        xhr.open('POST', '/command/core/delete-project', false);"+
+      "        xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');"+
+      "        xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');"+
+      "        xhr.setRequestHeader('Accept', 'application/json, text/javascript, */*');"+
+      "        xhr.send('project='+TDA_GetURLParameter('project'));"+
+      "      }"+
+      "    );"+
+      "  }"+
+      ");",
+    "http://localhost:4444"
+  );
+}
+
+function cancelAsync(fAfter)
+{
+  var win = document.getElementById('myiframe').contentWindow;
+  win.postMessage(
+    "TDAMESSAGE:"+
+      "function TDA_GetURLParameter(name) {"+
+      "  return decodeURIComponent((new RegExp('[?|\&]' + name + '=' + '([^\&;]+?)(\&|#|;|$)').exec(location.search)||[,\"\"])[1].replace(/\\+/g, '%20'))||null"+
+      "}"+
+      // deleting the openrefine project...
+      "        var xhr = new XMLHttpRequest();"+
+      "        xhr.open('POST', '/command/core/delete-project', false);"+
+      "        xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');"+
+      "        xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');"+
+      "        xhr.setRequestHeader('Accept', 'application/json, text/javascript, */*');"+
+      "        xhr.send('project='+TDA_GetURLParameter('project'));",
+    "http://localhost:4444"
+  );
+
+  setTimeout(fAfter, 500);
+}
+
+</script>
+
+</body>
+</html>
+

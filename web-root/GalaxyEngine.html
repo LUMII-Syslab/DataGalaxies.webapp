@@ -1,0 +1,1749 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<html>
+
+<!--
+  Info:
+    Galaxy components have the following conventions for their id-s:
+      Star<i>, - for stars
+      StellarWind<j>, IntoStellarWind<j>FromStar<i>, FromStellarWind<j>ToStar<i> - for stellar winds
+      Planet<k>, IntoPlanet<k>FromStar<i> - for planets
+      CrossFilter<z>, FromCrossFilter<z>ToPlanet<k>, FromCrossFilter<z>ToStellarWind<j> - for cross-filters
+
+    To generate new id-s, we call genGalacticId("Star"|"StellarWind"|"Planet"|"CrossFilter").
+    To find a webmem objects for a galaxy component with the given id, use findGalaxyComponentById(id) or findGalaxyComponentById(id, "Star"|"StellarWind"|"Planet"|"CrossFilter").
+
+    We use the vis.js network diagram stored in the global variable "chart". We adjust clicks to select the correct diagram nodes and to assign the value to
+    the "whatSelected" variable (one of null for the diagram, "Planet", "StellarWind", "CrossFilter", or "Star").
+    To get the selected nodes (stellar winds also have nodes), we use the vis.js function
+    chart.getSelectedNodes(), which returns an array with id-s of the selected nodes.
+    It is important to know the selected nodes when implementing the context menu.
+
+    When some context menu action (except of delete) on a component is clicked, the context menu does the necessary work and submits a RefreshGalaxyCommand with a component attached.
+    This command will try to run/cleanup the galaxy depending on the component.
+    However, for the delete action, the context menu cleanups (runs) the galaxy BEFORE invoking the webappos.deleteGalaxyComponents webcall. However, RefreshGalaxyCommand is still being
+    invoked without a component attached - to redraw the galaxy without deleted components.
+
+-->
+
+<head>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <title>DataGalaxies</title>
+  <script src="dojo/dojo.js" data-dojo-config="async:0"></script>
+
+  <script type="text/javascript" src="/webappos.js"></script>
+
+  <script type="text/javascript" src="/jquery.js"></script>
+
+  <!-- for context menu: -->
+  <link href="jeegoocontext/skins/cm_default/style.css" rel="Stylesheet" type="text/css" />
+  <link href="jeegoocontext/skins/cm_blue/style.css" rel="Stylesheet" type="text/css" />
+  <script type="text/javascript" src="jquery.livequery.js"></script>
+  <script type="text/javascript" src="jeegoocontext/jquery.jeegoocontext-2.0.0.js"></script>
+
+  <!-- for tooltips: -->
+  <link href="jquery.qtip.min.css" rel="Stylesheet" type="text/css" />
+
+  <style media="screen" type="text/css">
+    html {
+      border: 0;
+      padding: 0;
+      margin: 0;
+    }
+
+    body {
+      border: 0;
+      padding: 0;
+      margin: 0;
+    }
+
+    #chartContainer {
+      background: rgb(250, 250, 250);
+    }
+  </style>
+
+  <!-- for GraphViz: -->
+  <script type="text/javascript" src="graphvis/underscore-min.js"></script>
+
+</head>
+
+<body id="body" class='claro' style="margin:0; padding:0; width:100%; height:100%;">
+
+
+  <script type="text/javascript">
+    /***** GLOBAL VARIABLES *****/
+    var chart; // the vis.js chart object, initialized during executeEditGalaxyCommand
+    var endUserMode = false; // initialized during executeEditGalaxyCommand
+    var whatSelected =
+      null; // null, "Planet", "StellarWind", "CrossFilter", or "Star" - updated during clicks and right clicks
+
+    /***** IDs OF GALAXY COMPONENTS *****/
+
+    function genGalacticId(prefix) {
+      var maxid = {}; // map: prefix->max id
+      if (typeof maxid[prefix] == 'undefined')
+        maxid[prefix] = -1;
+
+      chart.data.nodes.forEach( item => {
+        var node_id = item.id;
+        if (node_id.substr(0, prefix.length) == prefix) {
+          var id = parseInt(node_id.substr(prefix.length));
+          if (id > maxid[prefix])
+            maxid[prefix] = id;
+        }
+      });
+      maxid[prefix]++;
+      return prefix + maxid[prefix];
+    }
+
+    function findGalaxyComponentById(id, desiredKindOf) {
+      let objs = webmem.GalaxyComponent.getAllObjects();
+      for (var rObj in objs) {
+        let obj = webmem[rObj];
+        if (obj.id == id) {
+          if (!desiredKindOf || obj.isKindOf(desiredKindOf))
+            return obj;
+        }
+      }
+      return null;
+    }
+
+    /***** IMPLEMENTING CONTEXT-MENU >>>>> *****/
+
+    // GENERATING CONTEXT-MENU ITEMS (depending on installed galaxy components)
+    function genSubMenuHTML(id_prefix, json) {
+      if ($.isEmptyObject(json))
+        return "";
+
+      var s = '';
+      for (name in json) {
+        var id = id_prefix + name;
+        var caption = name;
+        if (name.indexOf(":") != -1) {
+          id = id_prefix + name.substr(0, name.indexOf(":"));
+          caption = name.substr(name.indexOf(":") + 1);
+        }
+
+        if ($.isEmptyObject(json[name]))
+          s += '<li id="' + id + '">' + caption + '</li>';
+        else
+          s += '<li id="' + id + '">' + caption + '<ul id="sub' + id + '">' + genSubMenuHTML(id_prefix, json[name]) +
+          '</ul></li>';
+      }
+
+      return s;
+    }
+
+    // IMPLEMENTING CONTEXT-MENU ACTIONS
+    $(function () {
+      $('.context').jeegoocontext('menu', {
+        livequery: true,
+        widthOverflowOffset: 0,
+        heightOverflowOffset: 1,
+        submenuLeftOffset: -4,
+        submenuTopOffset: -5,
+        onSelect: function (e, context) {
+
+          let nodes = chart.getSelectedNodes();
+
+          if ($(this).attr('id').substr(0, 7) == "NewStar") {
+            if ($(this).children().length == 0) {
+
+              let wmobj = new webmem.Star();
+              wmobj.setLocation(chart.canvasPoint.x + "," + chart.canvasPoint.y);
+              wmobj.setState("NEW");
+              wmobj.setId(genGalacticId("Star"));
+              wmobj.setStarDataType($(this).attr('id').substr(7));
+              wmobj.linkDataGalaxy(webmem.DataGalaxy.getFirstObject());
+
+              webappos.webcall_and_wait("configureGalaxyComponent", {
+                frameLocation: "modalpopup(" + chart.clickPoint.x + "," + chart.clickPoint.y + ")",
+                star: [{
+                  id: wmobj.id
+                }]
+              });
+              return true;
+            }
+          }
+
+
+          if ($(this).attr('id').substr(0, 14) == "NewStellarWind") {
+            if ($(this).children().length == 0) {
+
+              var className = $(this).attr('id').substr(14);
+              webappos.webcall_and_wait("putGalacticTypeIntoMetamodel", className);
+
+              let new_id = genGalacticId("StellarWind");
+              let wStWind = new webmem[className];
+              wStWind.setLocation(chart.canvasPoint.x + "," + chart.canvasPoint.y);
+              wStWind.setId(new_id);
+              wStWind.setState("NEW");
+              wStWind.setName(new_id);
+
+              for (var i = 0; i < nodes.length; i++) {
+                wStWind.linkSource(findGalaxyComponentById(nodes[i]), "Star");
+              }
+
+              let wTargetStar = new webmem.Star();
+              wTargetStar.setId(genGalacticId("Star"));
+              wTargetStar.setState("CONFIGURATION_ERROR");
+              wTargetStar.setName("Target Star for " + new_id);
+
+              wStWind.linkTarget(wTargetStar);
+
+
+              webappos.webcall_and_wait("configureGalaxyComponent", {
+                frameLocation: "modalpopup(" + chart.clickPoint.x + "," + chart.clickPoint.y + ")",
+                stellarWind: [{
+                  id: new_id
+                }]
+              });
+              return true;
+            }
+          }
+
+
+          if ($(this).attr('id').substr(0, 9) == "NewPlanet") {
+            if ($(this).children().length == 0) {
+
+              var className = $(this).attr('id').substr(9);
+              webappos.webcall("putGalacticTypeIntoMetamodel", className).then(()=>{
+
+                var new_id = genGalacticId("Planet");
+                let wmobj = new webmem[className];
+                wmobj.setLocation(chart.canvasPoint.x + "," + chart.canvasPoint.y);
+                wmobj.setId(new_id);
+                wmobj.setState("NEW");
+                wmobj.setName(new_id + ": " + className);
+                wmobj.linkStar(findGalaxyComponentById(nodes[0], "Star")); // source star
+
+                webappos.webcall("configureGalaxyComponent", {
+                  frameLocation: "modalpopup(" + chart.clickPoint.x + "," + chart.clickPoint.y + ")",
+                  planet: [{
+                    id: new_id
+                  }]
+                });
+
+              });
+              return true;
+            }
+          }
+
+          if (($(this).attr('id').substr(0, 14) == "NewCrossFilter") ||
+            ($(this).attr('id').substr(0, 19) == "ExistingCrossFilter")) {
+            if ($(this).children().length == 0) {
+
+              var creatingNew = $(this).attr('id').substr(0, 14) == "NewCrossFilter";
+
+
+              if (creatingNew) {
+
+                var className = $(this).attr('id').substr(14);
+                webappos.webcall_and_wait("putGalacticTypeIntoMetamodel", className);
+
+                var new_id = genGalacticId("CrossFilter");
+                var wCrossFilter = new webmem[className]();
+                wCrossFilter.setLocation(chart.canvasPoint.x + "," + chart.canvasPoint.y);
+                wCrossFilter.setId(new_id);
+                wCrossFilter.setState("NEW");
+                wCrossFilter.setName(new_id + ": " + className);
+                var wobj = findGalaxyComponentById(nodes[0]);
+                if (wobj) {
+                  if (wobj.isKindOf("Planet"))
+                    wCrossFilter.linkPlanet(wobj);
+                  else
+                  if (wobj.isKindOf("StellarWind"))
+                    wCrossFilter.linkStellarWind(wobj);
+                }
+
+                webappos.webcall_and_wait("configureGalaxyComponent", {
+                  frameLocation: "modalpopup(" + chart.clickPoint.x + "," + chart.clickPoint.y + ")",
+                  crossFilter: [{
+                    id: new_id
+                  }]
+                });
+
+              } else {
+                var filterId = $(this).attr('id').substr(19); // ExistingCrossFilter
+                // attaching existing...
+                var filter = findGalaxyComponentById(filterId, "CrossFilter");
+
+                if (!filter)
+                  return true;
+
+                var wobj = findGalaxyComponentById(nodes[0]);
+                if (wobj) {
+                  if (wobj.isKindOf("Planet"))
+                    filter.linkPlanet(wobj);
+                  else
+                  if (wobj.isKindOf("StellarWind"))
+                    filter.linkStellarWind(wobj);
+                }
+
+                let cmd = new webmem.RefreshGalaxyCommand();
+                cmd.setModifiedComponent(filter);
+                cmd.setDataGalaxy(webmem.DataGalaxy.getFirstObject());
+                webmem.submit(cmd);
+
+              }
+              return true;
+            }
+          }
+
+
+          if ($(this).hasClass('disabled')) {
+            if (confirm('These options are disabled. Do you want to enable these options?'))
+              $(this).removeClass('disabled');
+
+            $(context).animate({
+              borderWidth: '0',
+              paddingLeft: '0',
+              paddingTop: '0',
+              paddingBottom: '0',
+              paddingRight: '0'
+            }, 200);
+            return true;
+          }
+
+          switch ($(this).attr('id')) {
+            case 'configure':
+              if (whatSelected == "Star") {
+                for (var i = 0; i < nodes.length; i++) {
+                  webappos.webcall_and_wait("configureGalaxyComponent", {
+                    frameLocation: "popup(" + (chart.clickPoint.x + (i * 10)) + "," + (chart.clickPoint
+                      .y + (i *
+                        10)) + ")",
+                    star: {
+                      id: nodes[i]
+                    }
+                  });
+                }
+              } else
+              if (whatSelected == "StellarWind") {
+                webappos.webcall_and_wait("configureGalaxyComponent", {
+                  frameLocation: "popup(" + chart.clickPoint.x + "," + chart.clickPoint.y + ")",
+                  stellarWind: {
+                    id: nodes[0]
+                  }
+                });
+                return true;
+              } else
+              if (whatSelected == "Planet") {
+                webappos.webcall_and_wait("configureGalaxyComponent", {
+                  frameLocation: "popup(" + chart.clickPoint.x + "," + chart.clickPoint.y + ")",
+                  planet: {
+                    id: nodes[0]
+                  }
+                });
+                return true;
+              } else
+              if (whatSelected == "CrossFilter") {
+                webappos.webcall_and_wait("configureGalaxyComponent", {
+                  frameLocation: "popup(" + chart.clickPoint.x + "," + chart.clickPoint.y + ")",
+                  crossFilter: {
+                    id: nodes[0]
+                  }
+                });
+                return true;
+              }
+              break;
+
+            case 'drop_star_configuration':
+              if (whatSelected == "Star") {
+
+                var ids = [];
+                for (var i = 0; i < nodes.length; i++)
+                  ids[i] = nodes[i];
+                var runs = webappos.webcall_and_wait("getRunsForCleanup", ids);
+                runGalaxy(runs, function () {
+                  for (var i = 0; i < ids.length; i++) {
+
+                    var star = findGalaxyComponentById(ids[i], "Star");
+                    if (!star)
+                      continue;
+
+                    var arr = star.getStarData();
+                    for (var i = 0; i < arr.length; i++) {
+                      arr[i].delete();
+                    }
+
+                    if (star.starDataType && (stars.starDataType.indexOf(",") == -1)) {
+                      var answer = webappos.webcall_and_wait("isFinalGalacticType", star.starDataType);
+                      if (answer.result)
+                        star.setState("CONFIGURATION_ERROR");
+                      else
+                        star.setState("CONFIGURATION_UNKNOWN");
+                    } else
+                      star.setState("CONFIGURATION_UNKNOWN");
+
+                    star.setName("");
+
+                    let cmd = new webmem.RefreshGalaxyCommand();
+                    cmd.setDataGalaxy(webmem.DataGalaxy.getFirstObject());
+                    webmem.submit(cmd);
+                  }
+                }); // runGalaxy
+              }
+              break;
+
+            case 'cleanup_star':
+              if (whatSelected == "Star") {
+
+                var ids = [];
+                for (var i = 0; i < nodes.length; i++)
+                  ids[i] = nodes[i];
+                var runs = webappos.webcall_and_wait("getRunsForCleanup", ids);
+                runGalaxy(runs);
+              }
+              break;
+
+            case 'new_star_multi': {
+              var star = new webmem.Star();
+              star.setLocation(chart.canvasPoint.x + "," + chart.canvasPoint.y);
+              star.setState("NEW");
+              star.setId(genGalacticId("Star"));
+              // do not specify starDataType; that means that this is a multi-typed star
+
+              webappos.webcall_and_wait("configureGalaxyComponent", {
+                frameLocation: "modalpopup(" + chart.clickPoint.x + "," + chart.clickPoint.y + ")",
+                star: [{
+                  id: star.id
+                }]
+              });
+              return true;
+            }
+            break;
+
+          case 'emit':
+            if (whatSelected == "StellarWind") {
+              var wind = findGalaxyComponentById(nodes[0], "StellarWind");
+              if (!wind)
+                return true;
+
+              var windRuns = webappos.webcall_and_wait("getRunsForGalaxyComponent", wind.id);
+              runGalaxy(windRuns);
+
+              return true;
+            }
+            break;
+
+          case 'visualize':
+            if (whatSelected == "Planet") {
+              var planet = findGalaxyComponentById(nodes[0], "Planet");
+              if (!planet)
+                return true;
+
+              var planetRuns = webappos.webcall_and_wait("getRunsForGalaxyComponent", planet.id);
+              if (planetRuns && (planetRuns.length > 0) && (planetRuns[planetRuns.length - 1].action ==
+                  "VisualizePlanet")) {
+                planetRuns[planetRuns.length - 1].frameLocation = "popup(" + chart.clickPoint.x + "," + chart
+                  .clickPoint.y + ")";
+              }
+
+              runGalaxy(planetRuns);
+
+              return true;
+            }
+            break;
+
+          case 'delete':
+            if (selectedNodes && (nodes.length > 0)) {
+              var components = [];
+              for (var i = 0; i < nodes.length; i++) {
+                components[i] = nodes[i];
+              }
+
+              var runs = webappos.webcall_and_wait("getRunsForCleanup", components);
+              runGalaxy(runs, function () {
+                webappos.webcall_and_wait("deleteGalaxyComponents", components); // will call refresh
+              });
+
+              return true;
+            }
+            break;
+
+          case 'deploy':
+            var frame = new webmem.Frame();
+            frame.setCaption("Deploy the galaxy to end users");
+            frame.setLocation("modalpopup");
+            frame.setOnCloseFrameRequestedEvent(
+              "staticjava:lv.lumii.datagalaxies.DataGalaxiesApp#onCloseFrameRequestedEvent");
+            frame.setContentURI("html:galactictypes/deployToEndUsers.html?frameReference=" + frame.reference);
+
+            var cmd = new webmem.AttachFrameCommand();
+            cmd.linkFrame(frame);
+            webmem.submit(cmd);
+
+            return true;
+            break;
+
+          default:
+            return false;
+          }
+          $(context).animate({
+            borderWidth: '0',
+            paddingLeft: '0',
+            paddingTop: '0',
+            paddingBottom: '0',
+            paddingRight: '0'
+          }, 200);
+        },
+        onHover: function (e, context) {
+          if ($(this).hasClass('disabled')) return false;
+        },
+        onShow: function (e, context) {
+          chart.clickPoint = {
+            x: e.clientX,
+            y: e.clientY
+          };
+          chart.canvasPoint = chart.DOMtoCanvas({
+            x: e.clientX,
+            y: e.clientY
+          });
+        },
+        onHide: function (e, context) {
+          $(context).animate({
+            borderWidth: '0',
+            paddingLeft: '0',
+            paddingTop: '0',
+            paddingBottom: '15px',
+            paddingRight: '0',
+            marginBottom: '0'
+          }, 200);
+        }
+      });
+    });
+
+
+    function prepareAndShowContextMenu() {
+      let nodes = chart.getSelectedNodes();
+      if (nodes.length == 0)
+        whatSelected = null;
+
+      if (whatSelected == "Star") {
+        // processing menu for new stellar winds...
+        var winds = webappos.webcall_and_wait("getPossibleStellarWinds", nodes);
+
+        if (winds)
+          $("#new_stellar_wind_sub").html(genSubMenuHTML("NewStellarWind", winds.StellarWind));
+
+        // processing menu for new planets...
+        if (nodes.length == 1) {
+          document.getElementById("new_planet").style.display = "block";
+
+          var planets = webappos.webcall_and_wait("getPossiblePlanets", nodes[0]);
+          if (planets)
+            $("#new_planet_sub").html(genSubMenuHTML("NewPlanet", planets.Planet));
+        } else {
+          document.getElementById("new_planet").style.display = "none";
+        }
+      }
+
+      // processing menu for cross-filters...
+      if ((whatSelected == "StellarWind") || (whatSelected == "Planet")) {
+        // processing menu for new planets...
+        document.getElementById("existing_cross_filter_sub").childNodes = [];
+
+        var filters = webappos.webcall_and_wait("getPossibleCrossFilters", nodes[0]);
+        if (filters) {
+          document.getElementById("new_cross_filter_sub").style.display = "block";
+          if (filters.possible_new)
+            $("#new_cross_filter_sub").html(genSubMenuHTML("NewCrossFilter", filters.possible_new));
+
+
+          if (filters.possible_existing) {
+            $("#existing_cross_filter_sub").html(genSubMenuHTML("ExistingCrossFilter", filters
+              .possible_existing));
+          }
+        }
+      } else
+        document.getElementById("new_cross_filter_sub").style.display = "none";
+
+      if (!whatSelected) {
+        $('#new_star').css("display", "block");
+        $('#new_star_by_type').css("display", "block");
+        $('#new_star_multi').css("display", "block");
+        $('#configure').css("display", "none");
+        $('#drop_star_configuration').css("display", "none");
+        $('#cleanup_star').css("display", "none");
+        $('#visualize').css("display", "none");
+        $('#new_stellar_wind').css("display", "none");
+        $('#new_planet').css("display", "none");
+        $('#new_cross_filter').css("display", "none");
+        $('#existing_cross_filter').css("display", "none");
+        $('#delete').css("display", "none");
+        $('#emit').css("display", "none");
+        $('#deploy').css("display", "block");
+      } else {
+        $('#new_star').css("display", "none");
+        $('#new_star_by_type').css("display", "none");
+        $('#new_star_multi').css("display", "none");
+        $('#configure').css("display", "block");
+        if (whatSelected == "Planet")
+          $('#visualize').css("display", "block");
+        else
+          $('#visualize').css("display", "none");
+        if (whatSelected == "Star") {
+          $('#new_stellar_wind').css("display", "block");
+          //          $('#new_planet').css("display", "block"); // -- this div has been made visible above
+          $('#drop_star_configuration').css("display", "block");
+          $('#cleanup_star').css("display", "block");
+        } else {
+          $('#new_stellar_wind').css("display", "none");
+          $('#new_planet').css("display", "none");
+          $('#drop_star_configuration').css("display", "none");
+          $('#cleanup_star').css("display", "none");
+        }
+        if ((whatSelected == "Planet") || (whatSelected == "StellarWind")) {
+          $('#new_cross_filter').css("display", "block");
+          $('#existing_cross_filter').css("display", "block");
+        } else {
+          $('#new_cross_filter').css("display", "none");
+          $('#existing_cross_filter').css("display", "none");
+        }
+        $('#delete').css("display", "block");
+        if (whatSelected == "StellarWind")
+          $('#emit').css("display", "block");
+        else
+          $('#emit').css("display", "none");
+        $('#deploy').css("display", "none");
+      }
+
+
+      //     $("#menu").css("display", "block").css("left", event.pageX + "px").css("top", event.pageY + "px");
+
+    }
+    /***** <<<<< IMPLEMENTING CONTEXT-MENU *****/
+
+    /***** END-USER MODE SPECIFIC >>>>> *****/
+    var runConfiguration = null;
+    var endUserRun = false;
+
+    function getEndUserWindow() {
+      var f = document.getElementById("endUserFrame");
+      var win;
+      if (f.contentWindow)
+        win = f.contentWindow;
+      else
+        win = f.frameElement.contentWindow;
+      return win;
+    }
+
+    function displayStyleInEndUserFrame(className, displayValue) {
+      var win = getEndUserWindow();
+      var els = win.document.getElementsByClassName(className);
+      for (var i = 0; i < els.length; i++) {
+        els[i].style.display = displayValue;
+      }
+    }
+
+    function dojoDisplayStyle(widget, displayValue) {
+      require(['dojo/dom-style'], function (domStyle) {
+        domStyle.set(widget.domNode, 'display', displayValue);
+      });
+    }
+
+    function getParentIFrame() {
+      var arrFrames = parent.document.getElementsByTagName("IFRAME");
+      for (var i = 0; i < arrFrames.length; i++) {
+        if (arrFrames[i].contentWindow === window)
+          return arrFrames[i];
+      }
+      return null;
+    }
+
+    function getParentIFrameID() {
+      var pfid = getParentIFrame();
+      if (pfid)
+        pfid = pfid.id;
+      else
+        pfid = webappos.js_util.get_query_value("frameReference");
+      return pfid;
+    }
+
+    function endUserConfigure(galaxyComponentId, divName, force) {
+      var galaxyComponent = findGalaxyComponentById(galaxyComponentId);
+
+      if ((galaxyComponent.getFrame().length > 0) || (galaxyComponent.state == "RUN_ERROR")) {
+        if (!force)
+          return;
+      }
+
+      var pfid = getParentIFrameID();
+
+      if (galaxyComponentId.indexOf("Star") == 0) {
+        webappos.webcall_and_wait("configureGalaxyComponent", {
+          frameLocation: "framediv:" + pfid + ".endUserFrame." + divName,
+          star: [{
+            id: galaxyComponentId
+          }]
+        });
+      } else
+      if (galaxyComponentId.indexOf("StellarWind") == 0) {
+        webappos.webcall_and_wait("configureGalaxyComponent", {
+          frameLocation: "framediv:" + pfid + ".endUserFrame." + divName,
+          stellarWind: [{
+            id: galaxyComponentId
+          }]
+        });
+        return true;
+      } else
+      if (galaxyComponentId.indexOf("Planet") == 0) {
+        webappos.webcall_and_wait("configureGalaxyComponent", {
+          frameLocation: "framediv:" + pfid + ".endUserFrame." + divName,
+          planet: [{
+            id: galaxyComponentId
+          }]
+        });
+        return true;
+      } else
+      if (galaxyComponentId.indexOf("CrossFilter") == 0) {
+        webappos.webcall_and_wait("configureGalaxyComponent", {
+          frameLocation: "framediv:" + pfid + ".endUserFrame." + divName,
+          crossFilter: [{
+            id: galaxyComponentId
+          }]
+        });
+        return true;
+      }
+
+    }
+
+    function endUserVisualize(galaxyComponentId) {
+      saveEndUserConfigurationFor(galaxyComponentId);
+
+      var galaxyComponent = findGalaxyComponentById(galaxyComponentId);
+
+      if (galaxyComponent.getFrame().length > 0) {
+        let ev = new webmem.CloseFrameRequestedEvent();
+        ev.linkFrame(galaxyComponent.getFrame[0]);
+        webmem.submit(ev);
+      }
+
+      var planetRuns = webappos.webcall_and_wait("getRunsForGalaxyComponent", galaxyComponentId);
+      if ((planetRuns != null) && (planetRuns.length > 0) && (planetRuns[planetRuns.length - 1].action ==
+          "VisualizePlanet")) {
+
+        planetRuns[planetRuns.length - 1].frameLocation = "framediv:" + getParentIFrameID() +
+          ".endUserFrame.visualizationFor" + galaxyComponentId;
+      }
+
+      runGalaxy(planetRuns);
+    }
+
+    function startEndUserConfiguration() {
+      var win = getEndUserWindow();
+      var els = win.document.getElementsByClassName("configurationDiv");
+      for (var i = 0; i < els.length; i++)
+        if (webappos.js_util.starts_with(els[i].id, "configurationFor")) {
+          var id = els[i].id.substr("configurationFor".length);
+          endUserConfigure(id, els[i].id);
+        }
+
+      els = win.document.getElementsByClassName("advancedConfigurationDiv");
+      for (var i = 0; i < els.length; i++)
+        if (webappos.js_util.starts_with(els[i].id, "configurationFor")) {
+          var id = els[i].id.substr("configurationFor".length);
+          endUserConfigure(id, els[i].id);
+        }
+    }
+
+    function finishEndUserConfiguration(cancel) {
+
+      var win = getEndUserWindow();
+      var els = win.document.getElementsByClassName("configurationDiv");
+      for (var i = 0; i < els.length; i++)
+        if (webappos.js_util.starts_with(els[i].id, "configurationFor")) {
+          var f = els[i].lastChild;
+          if (f) {
+            if (f.contentWindow) {
+              if (cancel)
+                f.contentWindow.onCancel();
+              else
+                f.contentWindow.onOK();
+            } else
+            if (f.frameElement) {
+              if (cancel)
+                f.frameElement.contentWindow.onCancel();
+              else
+                f.frameElement.contentWindow.onOK();
+            }
+          }
+        }
+
+      els = win.document.getElementsByClassName("advancedConfigurationDiv");
+      for (var i = 0; i < els.length; i++)
+        if (webappos.js_util.starts_with(els[i].id, "configurationFor")) {
+          var f = els[i].lastChild;
+          if (f) {
+            if (f.contentWindow) {
+              if ((typeof cancel != 'undefined') && (cancel)) {
+                if (f.contentWindow.onCancel) {
+                  f.contentWindow.onCancel();
+                }
+              } else {
+                if (f.contentWindow.onOK) {
+                  f.contentWindow.onOK();
+                }
+              }
+            } else
+            if (f.frameElement) {
+              if ((typeof cancel != 'undefined') && (cancel)) {
+                if (f.frameElement.contentWindow.onCancel)
+                  f.frameElement.contentWindow.onCancel();
+              } else {
+                if (f.frameElement.contentWindow.onOK)
+                  f.frameElement.contentWindow.onOK();
+              }
+            }
+          }
+        }
+
+    }
+
+
+    function saveEndUserConfigurationFor(id) {
+      var win = getEndUserWindow();
+      var el = win.document.getElementById("configurationFor" + id);
+      if (!el)
+        return;
+      var f = el.lastChild;
+      if (f) {
+        if (f.contentWindow) {
+          f.contentWindow.onOK();
+        } else
+        if (f.frameElement) {
+          f.frameElement.contentWindow.onOK();
+        }
+      }
+
+    }
+
+    function closeEndUserVisualizations() {
+      var win = getEndUserWindow();
+      var els = win.document.getElementsByClassName("visualizationDiv");
+      for (var i = 0; i < els.length; i++)
+        if (webappos.js_util.starts_with(els[i].id, "visualizationFor")) {
+          var f = els[i].lastChild;
+          if (f) {
+            if (f.contentWindow)
+              f.contentWindow.onClose();
+            else
+            if (f.frameElement)
+              f.frameElement.contentWindow.onClose();
+          }
+        }
+    }
+
+    function onEndUserFrameLoaded() {
+      delete endUserFrame.onload; // do not call the second time
+
+      var win = getEndUserWindow();
+
+      win.document.getElementsByTagName("head")[0].insertAdjacentHTML("beforeend",
+        "<style media=\"screen\" type=\"text/css\">" +
+        ".galaxybtn {" +
+        "  -webkit-box-shadow: 0px 1px 3px #666666;" +
+        "  -moz-box-shadow: 0px 1px 3px #666666;" +
+        "  box-shadow: 0px 1px 3px #666666;" +
+        "  color: #ffffff;" +
+        "  background: #73abf3;" +
+        //    "padding:3;"+
+        "  padding: 10px 20px 10px 20px;" +
+        "  text-decoration: none;" +
+        "}" +
+        ".galaxybtn:hover {" +
+        "  background: #83bbf3;" +
+        "  text-decoration: none;" +
+        "}" +
+        "</style>");
+
+      var els;
+      els = win.document.getElementsByClassName("configurationDiv");
+      for (var i = 0; i < els.length; i++)
+        if (webappos.js_util.starts_with(els[i].id, "configurationFor")) {
+          els[i].insertAdjacentHTML("afterbegin",
+            "<p class='not-for-save' align='center' style='margin:0; padding: 15px 0px 15px 0px; width:100%; background-color:#8fb4e0;'><a class='galaxybtn' id='buttonFor_" +
+            els[i].id + "' href='javascript:parent.endUserConfigure(\"" + els[i].id.substring("configurationFor"
+              .length) + "\", \"" + els[i].id + "\", true);'>Configure" + (els[i].name ? " " + els[i].name : "") +
+            "</a></p>");
+        }
+
+      els = win.document.getElementsByClassName("advancedConfigurationDiv");
+      for (var i = 0; i < els.length; i++)
+        if (webappos.js_util.starts_with(els[i].id, "configurationFor")) {
+          els[i].insertAdjacentHTML("afterbegin",
+            "<p class='not-for-save' align='center' style='margin:0; padding: 15px 0px 15px 0px; width:100%; background-color:#8fb4e0;'><a class='galaxybtn' id='buttonFor_" +
+            els[i].id + "' href='javascript:parent.endUserConfigure(\"" + els[i].id.substring("configurationFor"
+              .length) + "\", \"" + els[i].id + "\", true);'>Configure" + (els[i].name ? " " + els[i].name : "") +
+            "</a></p>");
+        }
+
+      els = win.document.getElementsByClassName("visualizationDiv");
+      for (var i = 0; i < els.length; i++)
+        if (webappos.js_util.starts_with(els[i].id, "visualizationFor")) {
+          els[i].insertAdjacentHTML("afterbegin",
+            "<p class='not-for-save' align='center' style='margin:0; padding: 15px 0px 15px 0px; width:100%; background-color:#8fb4e0;'><a class='galaxybtn' id='buttonFor_" +
+            els[i].id + "' href='javascript:parent.endUserVisualize(\"" + els[i].id.substring("visualizationFor"
+              .length) + "\");'>Visualize" + (els[i].name ? " " + els[i].name : "") + "</a></p>");
+        }
+
+      displayStyleInEndUserFrame("advancedConfigurationDiv", "none");
+      displayStyleInEndUserFrame("visualizationDiv", "none");
+      dojoDisplayStyle(rerunButtonDojo, "none");
+      startEndUserConfiguration();
+    }
+
+    function showAdvancedClick() {
+      if (showAdvanced.checked) {
+        displayStyleInEndUserFrame("advancedConfigurationDiv", "block");
+        if (endUserRun) {
+          displayStyleInEndUserFrame("configurationDiv", "block");
+          if (!stickyConfig.checked)
+            stickyConfigDojo.set("checked", true);
+        }
+      } else {
+        displayStyleInEndUserFrame("advancedConfigurationDiv", "none");
+      }
+    }
+
+    function stickyConfigClick() {
+      if (stickyConfig.checked) {
+        if (endUserRun) {
+          // show configuration divs...
+          displayStyleInEndUserFrame("configurationDiv", "block");
+          // show advanced configuration divs... (if needed)
+          if (showAdvanced.checked) {
+            displayStyleInEndUserFrame("advancedConfigurationDiv", "block");
+          } else {
+            displayStyleInEndUserFrame("advancedConfigurationDiv", "none");
+          }
+        }
+      } else {
+        if (endUserRun) {
+          // hide configuration divs...
+          displayStyleInEndUserFrame("configurationDiv", "none");
+          displayStyleInEndUserFrame("advancedConfigurationDiv", "none");
+          if (showAdvanced.checked)
+            showAdvancedDojo.set("checked", false);
+        }
+      }
+    }
+
+    function runClick() {
+      finishEndUserConfiguration();
+
+      if (!stickyConfig.checked) {
+        displayStyleInEndUserFrame("configurationDiv", "none");
+        displayStyleInEndUserFrame("advancedConfigurationDiv", "none");
+      }
+      displayStyleInEndUserFrame("visualizationDiv", "block");
+
+      var ids = [];
+      var win = getEndUserWindow();
+      var els = win.document.getElementsByClassName("visualizationDiv");
+      for (var i = 0; i < els.length; i++)
+        if (webappos.js_util.starts_with(els[i].id, "visualizationFor")) {
+          var id = els[i].id.substr("visualizationFor".length);
+          ids.push(id);
+        }
+
+      var s = ids[0];
+      ids.shift();
+      while (ids.length > 0) {
+        s = s + "," + ids[0];
+        ids.shift();
+      }
+
+      var f = function () {
+        var planetRuns = webappos.webcall_and_wait("getRunsForGalaxyComponent", s);
+        if (planetRuns != null) {
+          for (var i = 0; i < planetRuns.length; i++)
+            if (planetRuns[i].action == "VisualizePlanet") {
+              planetRuns[i].frameLocation = "framediv:" + getParentIFrameID() + ".endUserFrame.visualizationFor" +
+                planetRuns[i].id;
+            }
+        }
+        runGalaxy(planetRuns, startEndUserConfiguration);
+      };
+
+      setTimeout(f, 500);
+
+      endUserRun = true;
+      dojoDisplayStyle(runButtonDojo, "none");
+      dojoDisplayStyle(rerunButtonDojo, "block");
+
+
+
+    }
+
+    function rerunClick() {
+      endUserRun = false;
+      closeEndUserVisualizations();
+
+      runClick();
+    }
+
+    function resetClick() {
+      endUserRun = false;
+
+      closeEndUserVisualizations();
+      finishEndUserConfiguration(true); // cancel=true
+
+      dojoDisplayStyle(runButtonDojo, "block");
+      dojoDisplayStyle(rerunButtonDojo, "none");
+
+
+      displayStyleInEndUserFrame("configurationDiv", "block");
+      if (showAdvanced.checked)
+        displayStyleInEndUserFrame("advancedConfigurationDiv", "block");
+      displayStyleInEndUserFrame("visualizationDiv", "none");
+
+      var ids = [];
+      var win = getEndUserWindow();
+      var els = win.document.getElementsByClassName("configurationDiv");
+      for (var i = 0; i < els.length; i++)
+        if (webappos.js_util.starts_with(els[i].id, "configurationFor")) {
+          var id = els[i].id.substr("configurationFor".length);
+          ids.push(id);
+        }
+      if (showAdvanced.checked) {
+        els = win.document.getElementsByClassName("advancedConfigurationDiv");
+        for (var i = 0; i < els.length; i++)
+          if (webappos.js_util.starts_with(els[i].id, "configurationFor")) {
+            var id = els[i].id.substr("configurationFor".length);
+            ids.push(id);
+          }
+      }
+      var runs = webappos.webcall_and_wait("getRunsForCleanup", ids);
+      runGalaxy(runs, function () {
+        startEndUserConfiguration();
+      });
+    }
+
+    /***** <<<< END-USER MODE SPECIFIC *****/
+
+
+    /***** EDIT/REFRESH GALAXY >>>>> *****/
+    var tooltips = null;
+    var tooltipDialog = null;
+
+    function updateBackgroundAndFont() {
+      var ge = webmem.GalaxyEngine.getFirstObject();
+      if (ge.useGalacticIcons) {
+        $('#chartContainer').css('background-image', 'url(images/DG_DESIGNER_BACKGROUND.jpg)');
+        $('#chartContainer').css('background-size', '100% auto');
+        chart.setOptions({
+          nodes: {
+            font: {
+              color: "#e0e0e0"
+            },
+          }
+        });
+      } else {
+        $('#chartContainer').css('background-image', '');
+        chart.setOptions({
+          nodes: {
+            font: {
+              color: "#303030"
+            },
+          }
+        });
+      }
+    }
+
+
+    function executeEditGalaxyCommand(jsonObject) {
+      tooltips = jsonObject.tooltips;
+
+      require([
+        "graphvis/vis-network.min.js",
+        "jquery.qtip.min.js",
+        "dojo/domReady!"
+      ], function (vis, qtip) {
+
+
+
+        // checking for the end-user mode...
+        var x = webappos.webcall_and_wait("inEndUserMode");
+        endUserMode = x && x.result;
+
+        if (endUserMode) {
+          runConfiguration = x.runConfiguration;
+          runConfiguration = webappos.webcall_and_wait("loadObjects", {
+            navigationExpression: ".visibleComponent.*",
+            object: runConfiguration
+          });
+
+          // scaling the chart container to 0.25 (25%) and moving it to the point (0;75%), i.e., right bottom corner 
+          var h = $(document).height();
+          h = 1200;
+          $("#chartContainer").css("-ms-zoom", "" + (300 / h));;
+          $("#chartContainer").css("-moz-transform", "scale(" + (300 / h) + ")");
+          $("#chartContainer").css("-moz-transform-origin", "0 0");
+          $("#chartContainer").css("-o-transform", "scale(" + (300 / h) + ")");
+          $("#chartContainer").css("-o-transform-origin", "0 0");
+          $("#chartContainer").css("-webkit-transform", "scale(" + (300 / h) + ")");
+          $("#chartContainer").css("-webkit-transform-origin", "0 0");
+
+          $("#chartContainer").css("z-index", "-1");
+          $("#chartContainer").css("position", "absolute");
+          $("#chartContainer").css("left", "75%");
+          $("#chartContainer").css("top", "75%");
+
+
+          $("#chartContainer").css("pointer-events", "none");
+
+          // adding div to the top of the scaled chart container (right top corner)
+          $("body").append(
+            "<div id=\"afterChartContainer\" style=\"padding:10px; position:absolute; left:75%; top:0%; width:25%; height:75%; background-image: url(/images/DG_END_USER_BACKGROUND.jpg); background-size: 100% auto;\">" +
+            "<p align='center' style='font-size:18.0pt;font-family:\"Segoe UI Light\",\"sans-serif\";color:#D5D5F5'>" +
+            webappos.project_id + "</p>" +
+            "&nbsp;<input id='showAdvanced' name='showAdvanced' data-dojo-id=\"showAdvancedDojo\" data-dojo-type=\"dijit/form/CheckBox\" onChange=\"showAdvancedClick();\"/><label for='showAdvanced' style='color:#E5E5E5'> Show advanced configuration (if any)</label>" +
+            "<p>" +
+            "&nbsp;<input id='stickyConfig' name='stickyConfig' data-dojo-id=\"stickyConfigDojo\" data-dojo-type=\"dijit/form/CheckBox\" onChange=\"stickyConfigClick();\"/><label for='stickyConfig' style='color:#E5E5E5'> Keep configuration visible after Run</label>" +
+            "<p>" +
+            "<button id='runButton' data-dojo-id=\"runButtonDojo\" class='claro' type=\"button\" data-dojo-type=\"dijit/form/Button\" onclick='runClick();'>Run Galaxy!</button>" +
+            "<button id='rerunButton' data-dojo-id=\"rerunButtonDojo\" class='claro' type=\"button\" data-dojo-type=\"dijit/form/Button\" onclick='rerunClick();'>Re-run</button>" +
+            "<button id='resetButton' data-dojo-id=\"resetButtonDojo\" class='claro' type=\"button\" data-dojo-type=\"dijit/form/Button\" onclick='resetClick();'>Reset</button>" +
+            "<div style='position:absolute; bottom:0;'>" +
+            "<p align='center' style='font-style:italic;font-size:10.0pt;font-family:\"sans-serif\";color:#A5A5A5'>Image courtesy of seaskylab at FreeDigitalPhotos.net</p>" +
+            "</div>" +
+            "</div>");
+
+          require(["dojo/parser", "dijit/form/Button", "dijit/form/CheckBox", "dojo/domReady!"],
+            function (parser) {
+              parser.parse();
+            });
+
+
+          $("body").prepend(
+            "<iframe id='endUserFrame' style='padding:0; border:0; height:100%; width:75%;' onload='onEndUserFrameLoaded();' src='/filedownload/" +
+            webappos.project_id + "/GalaxyEngineForEndUsers.html?login=" + webappos.login + "&ws_token=" +
+            webappos.ws_token + "' style='padding:0; border:0; width:100%; height:100%;'></iframe>");
+
+        } else {
+          $("#chartContainer").addClass("context");
+        }
+
+        // generating the menu...
+        var starDataTypes = webappos.webcall_and_wait("getPossibleStarDataTypes", {});
+        if (starDataTypes) {
+          $("#new_star_by_type_sub").append(genSubMenuHTML("NewStar", starDataTypes.StarData));
+        }
+
+
+
+        let data = {
+          nodes: new vis.DataSet(jsonObject.nodes),
+          edges: new vis.DataSet(jsonObject.edges)
+        };
+
+        let options = {
+          nodes: {
+            //borderWidth:30,
+            borderWidthSelected: 50,
+            //size:30,
+            chosen: {
+              node: function (values, id, selected, hovering) {
+                values.shadow = selected;
+              }
+            },
+
+          },
+          edges: {
+            //smooth: false,
+            chosen: {
+              edge: function (values, id, selected, hovering) {
+                values.shadow = selected;
+                values.width *= 2;
+              }
+            }
+          },
+          interaction: {
+            hover: true,
+            hoverConnectedEdges: false
+          },
+        };
+
+        chart = new vis.Network(document.getElementById('chartContainer'), data, options);
+        chart.data = data;
+
+        // adding events...
+        if (!endUserMode) {
+          chart.on("dragEnd", function (params) {
+            for (var i = 0; i < params.nodes.length; i++) {
+              var nodeId = params.nodes[i];
+              var xy = chart.getPositions(nodeId)[nodeId];
+              console.log(nodeId, chart.getPositions(nodeId));
+              let gc = findGalaxyComponentById(nodeId);
+              if (gc) {
+                console.log(xy);
+                gc.setLocation(xy.x + "," + xy.y);
+              }
+              chart.data.nodes.update({
+                id: nodeId,
+                fixed: {
+                  x: true,
+                  y: true
+                }
+              });
+            }
+            chart.fit({
+              animation: true
+            });
+          });
+
+          chart.on('dragStart', function (params) {
+            for (var i = 0; i < params.nodes.length; i++) {
+              var nodeId = params.nodes[i];
+              console.log(nodeId, chart.getPositions(nodeId));
+              chart.data.nodes.update({
+                id: nodeId,
+                fixed: {
+                  x: false,
+                  y: false
+                }
+              });
+            }
+          });
+
+          chart.on("hoverNode", function (params) {
+            chart.lastTooltip = tooltips[params.node];
+            if (chart.lastTooltip) {
+              $('#chartContainer').qtip({
+                content: chart.lastTooltip,
+                show: {
+                  event: event.type // original event
+                },
+                position: {
+                  my: 'top left',
+                  target: 'mouse',
+                  adjust: {
+                    x: 10,
+                    y: 10
+                  }
+                }
+              });
+            }
+          });
+
+          chart.on("blurNode", function (params) {
+            if (chart.lastTooltip) {
+              $('#chartContainer').qtip({
+                content: chart.lastTooltip,
+                hide: true
+              });
+              delete chart.lastTooltip;
+            }
+          });
+
+          let fSelect = function (params) {
+            // selection changed by user action; adjusting selected elements...
+            console.log("select", params);
+
+            if ((params.nodes.length == 0) && (params.edges.length == 0)) { // no nodes and no edges
+              chart.lastAllStars = [];
+              whatSelected = null; // the diagram selected
+              return;
+            }
+
+            if (params.nodes.length > 0) { // some nodes selected...
+              let allStars = true;
+              for (let i = 0; i < params.nodes.length; i++) {
+                if (!webappos.js_util.starts_with(params.nodes[i], "Star")) {
+                  allStars = false;
+                  break;
+                }
+              }
+
+              if (allStars) {
+                // ensuring previous char.lastAllStars...
+                if (!chart.lastAllStars)
+                  chart.lastAllStars = [];
+
+                // merging stars from previous char.lastAllStars and current params.nodes...
+
+                for (let i = 0; i < params.nodes.length; i++)
+                  chart.lastAllStars.push(params.nodes[i]);
+
+                chart.selectNodes(chart.lastAllStars, false); // do not select edges
+
+                whatSelected = "Star";
+                return;
+              }
+            }
+
+            // not all stars, getting the id of the first selected element (assume only one has been selected in this case)...
+            chart.lastAllStars = [];
+            let id = null;
+            if (params.nodes.length > 0)
+              id = params.nodes[0];
+            else
+              id = params.edges[0];
+
+            // assert !webappos.js_util.starts_with(id,"Star"); // otherwise, we would caught that star in the previous step using the allStars variable...
+            if (webappos.js_util.starts_with(id, "StellarWind") || webappos.js_util.starts_with(id,
+                "FromStellarWind") || webappos.js_util.starts_with(id, "IntoStellarWind")) {
+              if (webappos.js_util.starts_with(id, "FromStellarWind")) {
+                id = id.substr(4);
+                id = id.substr(0, id.indexOf("To"));
+              }
+              if (webappos.js_util.starts_with(id, "IntoStellarWind")) {
+                id = id.substr(4);
+                id = id.substr(0, id.indexOf("From"));
+              }
+
+              let nodes2select = [id]; // selecting the stellar wind...
+              // selecting ingoing and outgoing links...
+              let edges2select = chart.data.edges.get({
+                filter: function (item) {
+                  return webappos.js_util.starts_with(item.id, "Into" + id) || webappos.js_util.starts_with(
+                    item.id, "From" + id);
+                }
+              }).map(item => item.id);
+              chart.setSelection({
+                nodes: nodes2select,
+                edges: edges2select
+              });
+              whatSelected = "StellarWind";
+              return;
+            }
+
+            if (webappos.js_util.starts_with(id, "Planet") || webappos.js_util.starts_with(id, "IntoPlanet")) {
+              if (webappos.js_util.starts_with(id, "IntoPlanet")) {
+                id = id.substr(4);
+                id = id.substr(0, id.indexOf("From"));
+              }
+
+              let nodes2select = [id]; // selecting the planet...
+              // selecting ingoing links...
+              let edges2select = chart.data.edges.get({
+                filter: function (item) {
+                  return webappos.js_util.starts_with(item.id, "Into" + id);
+                }
+              }).map(item => item.id);
+              chart.setSelection({
+                nodes: nodes2select,
+                edges: edges2select
+              });
+              whatSelected = "Planet";
+              return;
+            }
+
+            if (webappos.js_util.starts_with(id, "CrossFilter")) {
+
+              let nodes2select = [id]; // selecting the cross filter...
+              // selecting outgoing links...
+              let edges2select = chart.data.edges.get({
+                filter: function (item) {
+                  return webappos.js_util.starts_with(item.id, "From" + id);
+                }
+              }).map(item => item.id);
+
+              chart.setSelection({
+                nodes: nodes2select,
+                edges: edges2select
+              });
+              whatSelected = "CrossFilter";
+              return;
+            }
+
+            // default: the diagram selected...
+            chart.unselectAll();
+            whatSelected = null;
+          };
+
+          chart.on('select', fSelect);
+
+          chart.on('oncontext', function (params) {
+            let coos = chart.canvasToDOM(params.pointer.canvas);
+            let node = chart.getNodeAt(coos);
+            let edge = chart.getEdgeAt(coos);
+            console.log("context", params, node, edge);
+            if (node) {
+              params.nodes = [node];
+              fSelect(params);
+            }
+            else
+              if (edge) {
+                params.edges = [edge];
+                params.nodes = [];
+                fSelect(params);
+              }
+              else {
+                chart.unselectAll();
+                whatSelected = null;
+              }
+            prepareAndShowContextMenu();
+          });
+        }
+
+
+
+        chart.fit();
+        updateBackgroundAndFont();
+
+      }); // dojo/domReady!
+
+    } // executeEditGalaxyCommand
+
+    function executeRefreshGalaxyCommand(jsonObject) {
+      tooltips = jsonObject.tooltips;
+
+      console.log("REFRESH",jsonObject);
+
+      require([
+        "graphvis/vis-network.min.js",
+        "dojo/domReady!"
+      ], function (vis) {
+
+        // deleting & adding nodes & edges...
+        let existingNodes = {};
+        for (let i = 0; i < jsonObject.nodes.length; i++)
+          existingNodes[jsonObject.nodes[i].id] = true;
+        let existingEdges = {};
+        for (let i = 0; i < jsonObject.edges.length; i++)
+          existingEdges[jsonObject.edges[i].id] = true;
+
+        let nodes2delete = chart.data.nodes.get({
+          filter: function (item) {
+            return !existingNodes[item.id];
+          }
+        });
+
+        let edges2delete = chart.data.edges.get({
+          filter: function (item) {
+            return !existingEdges[item.id];
+          }
+        });
+
+        chart.data.nodes.remove(nodes2delete);
+        chart.data.edges.remove(edges2delete);
+
+        chart.data.nodes.update(jsonObject.nodes);
+        chart.data.edges.update(jsonObject.edges);
+
+        chart.fit();
+        updateBackgroundAndFont();
+
+        if (jsonObject.modifiedComponent && jsonObject.modifiedComponent.length) {
+          // a modified component is specified; trying to cleanup/run the galaxy...
+          var c = jsonObject.modifiedComponent[0];
+
+
+          if (running()) {
+            if (c.id == runningId())
+              runNext(); // configuration during run
+          } else {
+            if (runs != null) {
+              runNext(); // this refresh is for finishing the last run...
+            } else {
+              if (webappos.js_util.starts_with(c.id, "CrossFilter")) {
+                // Cross-filter changed. We need to re-run the components affected by that filter.
+                // getting all visible planets...
+
+                let planets = webmem.Planet.getAllObjects();
+                let visiblePlanets = [];
+                for (let r in planets) {
+                  if (webmem[r].state == "RUN_OK") {
+                    // this planet is visible...
+                    visiblePlanets.push(webmem[r]);
+                  }
+                }
+
+                // getting forward cleanup actions...
+                let newRuns = webappos.webcall_and_wait("getRunsForCleanup", JSON.stringify([">" + c.id]));
+                if (!newRuns)
+                  return;
+
+                let filter = webmem[c.reference];
+                var filterHasFrame = filter.frame && (filter.frame.length > 0);
+
+                if (filterHasFrame) {
+                  runGalaxy(newRuns, function () {
+                    // call ConfigureCrossFilter at the end...
+                    webappos.webcall_and_wait("configureGalaxyComponent" /*"ConfigureCrossFilter"*/ , {
+                      frameLocation: filter.frame[0].location,
+                      crossFilter: [{
+                        id: filter.id
+                      }]
+                    });
+                  });
+                } else {
+                  var fwait = function () {
+                    console.log("fwait");
+                    var cnt = 0; // counting closed frames...
+                    for (let i = 0; i < visiblePlanets.length; i++) {
+                      let f = webmem[visiblePlanets[i].frame[0].reference];
+                      if (f.getEnvironmentEngine().length == 0) {
+                        cnt++;
+                      }
+                    }
+                    if (cnt != visiblePlanets.length) {
+                      setTimeout(fwait, 500);
+                      return;
+                    }
+
+                    // adding visualization actions for planets that were visualized before cleanup
+                    for (let i = 0; i < visiblePlanets.length; i++) {
+                      //console.log("fwait run "+visiblePlanets[i].id);
+                      var planetRuns = webappos.webcall_and_wait("getRunsForGalaxyComponent", visiblePlanets[i]
+                        .id);
+                      if (planetRuns && (planetRuns.length > 0) && (planetRuns[planetRuns.length - 1].action ==
+                          "VisualizePlanet")) {
+                        planetRuns[planetRuns.length - 1].frameLocation =
+                          visiblePlanets[i].frame[0].location;
+                      }
+                      runGalaxy(planetRuns);
+                    }
+                  };
+
+                  runGalaxy(newRuns, fwait);
+                }
+              } else {
+                // not a cross filter...
+                var newRuns = webappos.webcall_and_wait("getRunsForCleanup", JSON.stringify([">" + c.id]));
+                runGalaxy(newRuns);
+              }
+            }
+          }
+
+        } else {
+          // modified component not specified...
+
+          if (!running() && (runs != null)) {
+            runNext(); // finishing runs (planets do not specify components, when refreshing)
+          }
+          if (running()) {
+            if (runs[runIndex - 1].action == "VisualizePlanet")
+              runNext();
+          }
+        }
+
+      });
+
+    } // executeRefreshGalaxyCommand
+
+    /***** <<<<< EDIT/REFRESH GALAXY *****/
+    var lastStoreCoo = 0;
+
+
+
+    var runs = null;
+    var runIndex = 0;
+    var fAfterRuns = null;
+    var standbyObject = null;
+
+    function runningId() {
+      if (!running())
+        return null;
+      return runs[runIndex - 1].id;
+    }
+
+    function running() {
+      return (runs != null) && (runIndex < runs.length);
+    }
+
+    function runNext() {
+      if (running()) {
+        checkRunError(runningId());
+        runIndex++;
+        webappos.webcall("runGalaxyComponentAsync", runs[runIndex - 1]);
+      } else {
+        if ((runs != null) && (runs.length > 0))
+          checkRunError(runs[runs.length - 1].id);
+        runs = null;
+        if (fAfterRuns) {
+          var f = fAfterRuns;
+          fAfterRuns = null;
+          f();
+        }
+        if (standbyObject)
+          standbyObject.hide();
+      }
+    }
+
+    function clearRunErrors() {
+      if (endUserMode) {
+        var win = getEndUserWindow();
+        var el = win.document.getElementById("errorDiv");
+        if (el)
+          el.innerHTML = "";
+      }
+    }
+
+    function printRunError(msg) {
+      if (endUserMode) {
+        var win = getEndUserWindow();
+        var el = win.document.getElementById("errorDiv");
+        if (el)
+          el.innerHTML += msg + "<br/>";
+      } else
+        console.log("GALAXY RUN ERROR: " + msg);
+    }
+
+    function checkRunError(id) {
+      if (id == null)
+        return;
+      var c = webappos.webcall_and_wait("findObjects", {
+        isKindOf: "GalaxyComponent",
+        id: id
+      });
+
+      if ((!c) || (c.length == 0))
+        return;
+      c = c[0];
+      if (c.state == "RUN_ERROR") {
+        if (c.stateMessage)
+          printRunError(c.name + " (" + c.id + ") run error: " + c.stateMessage);
+        else
+          printRunError(c.name + " (" + c.id + ") run error");
+      } else
+      if (c.state == "CONFIGURATION_ERROR") {
+        var action = runs[runIndex - 1].action;
+        if (action == "InitializeStar") {
+          if (c.stateMessage)
+            printRunError(c.name + " (" + c.id + ") initialization error: " + c.stateMessage);
+          else
+            printRunError(c.name + " (" + c.id + ") initialization error: star not configured");
+        } else
+        if (action == "FinalizeStar") {
+          if (c.stateMessage)
+            printRunError(c.name + " (" + c.id + ") finalization error: " + c.stateMessage);
+          else
+            printRunError(c.name + " (" + c.id + ") finalization error: star not configured");
+        } else
+        if (action == "CleanupStar") {
+          // do not report error in this case
+        } else {
+          if (c.stateMessage)
+            printRunError(c.name + " (" + c.id + ") configuration error: " + c.stateMessage);
+          else
+            printRunError(c.name + " (" + c.id + ") configuration error");
+        }
+      } else
+      if (c.state == "CONFIGURATION_UNKNOWN") {
+        if (c.stateMessage)
+          printRunError(c.name + " (" + c.id + ") configuration not specified: " + c.stateMessage);
+        else
+          printRunError(c.name + " (" + c.id + ") configuration not specified");
+      }
+    }
+
+    function runGalaxy(newRuns, f, triesRemaining) {
+      if (typeof triesRemaining == "undefined")
+        triesRemaining = 10;
+
+      if (running()) {
+
+        if (!triesRemaining) {
+          console.log("runGalaxy: Galaxy is already running.");
+          return;
+        }
+        console.log("runGalaxy: Galaxy is already running, but we will try again later...");
+        setTimeout(function () {
+          runGalaxy(newRuns, f, triesRemaining - 1);
+        }, 500);
+        return;
+      }
+
+
+
+
+      clearRunErrors();
+      if (!newRuns) {
+        runs = null;
+        runIndex = 0;
+        if (f) f();
+        return;
+      }
+
+      runs = newRuns;
+      runIndex = 0;
+      if (runs.length > 0) {
+
+        require(["dojox/widget/Standby", "dojo/domReady!"],
+          function (Standby) {
+            if (standbyObject == null) {
+              standbyObject = new Standby({
+                target: "body"
+              });
+              document.body.appendChild(standbyObject.domNode);
+              standbyObject.startup();
+            }
+            standbyObject.show();
+          });
+
+        fAfterRuns = f;
+        runIndex = 1; // move to the next run
+        webappos.webcall_and_wait("runGalaxyComponentAsync", runs[0]);
+      } else {
+        if (f) f();
+      }
+    }
+
+
+    if (window.frameElement) {
+      window.frameElement.setAttribute("scrolling", "no");
+    }
+  </script>
+
+
+
+  <div id="chartContainer" style="padding:0; overflow-x: hidden; overflow-y: hidden; width:100%; height:100%;">
+  </div>
+
+  <!--  Context menu -->
+  <ul id="menu" class="jeegoocontext cm_blue">
+    <li id="configure">
+      Configure...
+    </li>
+    <li id="emit">
+      Emit...
+    </li>
+    <li id="cleanup_star">
+      Cleanup star data
+    </li>
+    <li id="drop_star_configuration">
+      Drop star configuration
+    </li>
+    <li id="visualize">
+      Visualize...
+    </li>
+    <li id="new_star_by_type">
+      New star by type
+      <ul id="new_star_by_type_sub">
+      </ul>
+    </li>
+    <li id="new_star_multi">
+      New multi-typed star...
+    </li>
+    <li id="new_stellar_wind">
+      New stellar wind
+      <ul id="new_stellar_wind_sub">
+      </ul>
+    </li>
+    <li id="new_planet">
+      New planet
+      <ul id="new_planet_sub">
+      </ul>
+    </li>
+    <li id="new_cross_filter">
+      New cross filter
+      <ul id="new_cross_filter_sub">
+      </ul>
+    </li>
+    <li id="existing_cross_filter">
+      Attach existing cross filter
+      <ul id="existing_cross_filter_sub">
+        <!--Items are located in the chilren of this <ul> corresponding
+                 to final cross-filter types-->
+      </ul>
+    </li>
+    <li id="delete">Delete</li>
+    <li id="deploy">Deploy (for end users)...</li>
+  </ul>
+
+</body>
+
+</html>

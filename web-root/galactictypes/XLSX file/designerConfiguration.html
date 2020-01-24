@@ -1,0 +1,61 @@
+<script src="/tda.js"></script>
+<script src="/jquery-1.11.1.min.js"></script>
+
+Star name: <input type="edit" id="starName" value="xlsx file"/>
+<p>
+
+<div id="file_choose">
+Choose .xls file:
+<input id="finput" type="file" accept=".xlsx,.xlsm"/>
+<br>
+</div>
+
+<div id="file_name">
+Enter target .xls file name:
+<input id="ftext" type="text"/>
+<br>
+</div>
+
+<script>
+
+var cancel = null;
+
+function load(star)
+{
+  if (star.producer) {
+    file_choose.parentNode.removeChild(file_choose);
+    ftext.value = star.starData[0].fileName;
+  }
+  else {
+    file_name.parentNode.removeChild(file_name);
+    tda.initializeFileInput(finput, star.starData[0].fileName);
+    cancel = function () { tda.finalizeFileInput(finput, false); }
+  }
+
+  if (star.name)
+    $("#starName").value = star.name;
+
+}
+
+function store(star)
+{
+  star.name = document.getElementById("starName").value;
+  if (!star.name)
+    star.state = "CONFIGURATION_ERROR";
+
+  if (star.producer) {
+    if (star.starData[0].fileName)
+      tda.fileDelete(star.starData[0].fileName);
+    star.starData[0].fileName = ftext.value;
+  }
+  else
+    star.starData[0].fileName = tda.finalizeFileInput(finput, true);
+
+  if (!star.starData[0].fileName)
+    star.state = "CONFIGURATION_ERROR";
+}
+
+
+</script>
+
+

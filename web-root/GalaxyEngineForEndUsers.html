@@ -1,0 +1,24 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<html>
+<head>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <title>DataGalaxies</title>
+
+  <script type="text/javascript" src="/webappos.js"></script>
+
+  <script type="text/javascript" src="/jquery.js"></script>
+
+</head>
+
+<body>
+  <div id="theDiv" style="width:100%;height:100%;"></div>
+
+  <script>
+  webappos.request_scopes("webappos_scopes", "project_id").then(function(){
+    $("#theDiv").load('/services/filedownload/'+webappos.project_id+'/GalaxyEngineForEndUsers.html?login='+webappos.login+'&ws_token='+webappos.ws_token+'&project_id='+webappos.project_id+'&auto_content_type');
+  });
+  </script>
+
+</body>
+
+</html>

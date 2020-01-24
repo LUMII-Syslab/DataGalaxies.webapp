@@ -1,0 +1,188 @@
+<html>
+<head>
+<script src="/tda.js"></script>
+<script src="/jquery-1.11.1.min.js"></script>
+</head>
+<body>
+Converting JSON array to tree...
+<div id="aaa"></div>
+
+<script id="getParentTag">
+</script>
+<script>
+
+var stellarWind = null;
+var fAfter = null;
+var src;
+var isParentOf;
+
+function recurse(json, attr, otherAttrs)
+{
+  if (otherAttrs.length == 0) {
+    var xhr = new XMLHttpRequest();
+    xhr.onreadystatechange = function () {
+      if (xhr.readyState != 4) return;
+      if (xhr.status == 200) {
+        try {
+          var json2 = JSON.parse(xhr.responseText);
+          json.location = json2.city + ", " + json2.country;
+        }
+        catch(t) {}
+      }
+    };
+    xhr.open('GET', 'http://ip-api.com/json/'+json[attr], false);
+    xhr.send(null);
+    return; // end of recursion
+  }
+
+  if (attr=="*") {
+    var nextAttr = otherAttrs.shift();
+    for (var k in json) {
+      recurse(json[k], nextAttr, otherAttrs);
+    }
+  }
+  else {
+    nextAttr = otherAttrs.shift();
+    recurse(json[attr], nextAttr, otherAttrs);
+  }
+}
+
+function processAsync(j)
+{
+  setTimeout(function() {
+    var cid = src[j][stellarWind.idAttributeName];
+    for (var i in src) {
+      if (i==j)
+        continue;
+      var pid = src[i][stellarWind.idAttributeName];
+      if (isParentOf(pid, cid)) {
+        src[j].parent = src[i];
+        if (!(stellarWind.childrenAttributeName in src[i]))
+          src[i][stellarWind.childrenAttributeName] = [];
+        src[i][stellarWind.childrenAttributeName].push(src[j]);
+        break; // for i... (parent found)
+      }
+    }
+/*    var node = document.createElement("LI");          
+    var textnode = document.createTextNode(j+" "+cid);
+    node.appendChild(textnode);                       
+    document.getElementById("aaa").appendChild(node); */
+  }, 0);
+}
+
+function emitAsync(_stWind, _fAfter)
+{
+  stellarWind = _stWind;
+  fAfter = _fAfter;
+
+  if (!stellarWind.source[0].starData) {
+    stellarWind.state = "RUN_ERROR";
+    finalized = true;
+    fAfter();
+    return;
+  }
+
+  if (!stellarWind.target[0].starData) {
+    stellarWind.state = "RUN_ERROR";
+    finalized = true;
+    fAfter();
+    return;
+  }
+
+  if ( (typeof (stellarWind.idAttributeName) == 'undefined')||
+       (!stellarWind.idAttributeName) ||
+       (typeof (stellarWind.childrenAttributeName) == 'undefined')||
+       (!stellarWind.childrenAttributeName) )
+  {
+    stellarWind.state = "RUN_ERROR";
+    finalized = true;
+    fAfter();
+    return;
+  }
+
+  if (!stellarWind.target[0].starData[0].fileName) {
+    stellarWind.state = "RUN_ERROR";
+    finalized = true;
+    fAfter();
+    return;
+  }
+
+
+//  alert("emitting from "+stellarWind.source[0].starData[0].fileName +" to "+
+//                         stellarWind.target[0].starData[0].fileName);
+
+  var sFile = tda.fileContentAsUTF8String(stellarWind.source[0].starData[0].fileName);
+  try {
+    src = JSON.parse(sFile);
+  }
+  catch(t) {
+    alert("could not parse source json");
+    console.log(sFile);
+    stellarWind.state = "RUN_ERROR";
+    finalized = true;
+    fAfter();
+    return;
+  }
+  try {
+    isParentOf = eval(stellarWind.isParentOf+"; isParentOf;");
+  }
+  catch(t) {
+    alert("could not parse function isParentOf");
+    stellarWind.state = "RUN_ERROR";
+    finalized = true;
+    fAfter();
+    return;
+  }
+
+  for (var j in src) {
+    processAsync(j);
+  }
+
+  setTimeout(function() {
+    var resultJson = [];
+    for (var i in src)
+      if (!("parent" in src[i])) // root node
+        resultJson.push(src[i]);
+
+    for (var i in src)
+      delete src[i].parent;
+
+    var result = tda.fileUploadFromString(stellarWind.target[0].starData[0].fileName, JSON.stringify(resultJson, null, 2));
+    console.log("file "+stellarWind.target[0].starData[0].fileName+" res="+result);
+
+    if (result) {
+      stellarWind.state = 'RUN_OK';
+      stellarWind.target[0].state = "RUN_OK";
+    }
+    else {
+      stellarWind.state = 'RUN_ERROR';
+      stellarWind.target[0].state = "CONFIGURATION_OK";
+    }
+    finalized = true;
+    fAfter();
+  }, 1);
+}
+
+
+var finalized = false;
+
+function finalize()
+{
+  if (finalized)
+    return;
+  finalized = true;
+
+  if (stellarWind && (stellarWind.state=="RUNNING")) {
+    stellarWind.state = "RUN_ERROR";
+    stellarWind.stateMessage = "Run cancelled.";
+    tda.jsonsubmit("storeObjects", [stellarWind]);
+  }
+
+  if (fAfter)
+    fAfter();
+}
+
+</script>
+
+</body>
+</html>

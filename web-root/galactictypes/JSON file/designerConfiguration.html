@@ -1,0 +1,67 @@
+<script src="/tda.js"></script>
+<script src="/jquery-1.11.1.min.js"></script>
+
+Star name: <input type="edit" id="starName" value="JSON file"/>
+<p>
+
+<div id="json_choose">
+Choose .json file:
+<input id="finput" type="file" accept=".json"/>
+<br>
+</div>
+
+<div id="json_name">
+Enter target .json file name:
+<input id="ftext" type="text"/>
+<br>
+</div>
+
+<script>
+
+var cancel = null;
+
+function load(star)
+{
+  if (star.producer) {
+    json_choose.parentNode.removeChild(json_choose);
+    ftext.value = star.starData[0].fileName;
+  }
+  else {
+    json_name.parentNode.removeChild(json_name);
+    tda.initializeFileInput(finput, star.starData[0].fileName);
+    cancel = function () { tda.finalizeFileInput(finput, false); }
+  }
+
+/*  star = tda.jsonsubmit("loadObjects", {
+      navigationExpression : ".starData.*",
+      objects : [star]
+    }
+  )[0];*/
+
+  if (star.name)
+    document.getElementById("starName").value = star.name;
+
+}
+
+function store(star)
+{
+  star.name = document.getElementById("starName").value;
+  if (!star.name)
+    star.state = "CONFIGURATION_ERROR";
+
+  if (star.producer) {
+    if (star.starData[0].fileName)
+      tda.fileDelete(star.starData[0].fileName);
+    star.starData[0].fileName = ftext.value;
+  }
+  else
+    star.starData[0].fileName = tda.finalizeFileInput(finput, true);
+
+  if (!star.starData[0].fileName)
+    star.state = "CONFIGURATION_ERROR";
+}
+
+
+</script>
+
+

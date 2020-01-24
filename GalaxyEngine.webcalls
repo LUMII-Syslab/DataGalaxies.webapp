@@ -1,0 +1,40 @@
+# Galactic types
+jsoncall\ isFinalGalacticType=staticjava:lv.lumii.datagalaxies.GalaxyEngine_webcalls#isFinalGalacticType
+jsoncall\ getAllPossibleGalacticTypes=staticjava:lv.lumii.datagalaxies.GalaxyEngine_webcalls#getAllPossibleGalacticTypes
+jsoncall\ getPossibleStarDataTypes=staticjava:lv.lumii.datagalaxies.GalaxyEngine_webcalls#getPossibleStarDataTypes
+jsoncall\ getPossibleStellarWinds=staticjava:lv.lumii.datagalaxies.GalaxyEngine_webcalls#getPossibleStellarWinds
+jsoncall\ getPossiblePlanets=staticjava:lv.lumii.datagalaxies.GalaxyEngine_webcalls#getPossiblePlanets
+jsoncall\ getPossibleCrossFilters=staticjava:lv.lumii.datagalaxies.GalaxyEngine_webcalls#getPossibleCrossFilters
+jsoncall\ putGalacticTypeIntoMetamodel=staticjava:lv.lumii.datagalaxies.GalaxyEngine_webcalls#putGalacticTypeIntoMetamodel
+
+# Editing a galaxy...
+jsoncall\ storeGalaxyCoordinates=staticjava:lv.lumii.datagalaxies.GalaxyEngine_webcalls#storeGalaxyCoordinates
+jsoncall\ configureGalaxyComponent=staticjava:lv.lumii.datagalaxies.GalaxyEngine_webcalls#configureGalaxyComponent
+
+# The following 4 calls are called from ConfigureGalaxyComponent as commands
+webmemcall\ ConfigureStar=staticjava:lv.lumii.datagalaxies.GalaxyEngine_webcalls#redirectToLaunchTransformationCommand
+webmemcall\ ConfigureStellarWind=staticjava:lv.lumii.datagalaxies.GalaxyEngine_webcalls#redirectToLaunchTransformationCommand
+webmemcall\ ConfigureCrossFilter=staticjava:lv.lumii.datagalaxies.GalaxyEngine_webcalls#redirectToLaunchTransformationCommand
+webmemcall\ ConfigurePlanet=staticjava:lv.lumii.datagalaxies.GalaxyEngine_webcalls#redirectToLaunchTransformationCommand
+
+webmemcall\ InitializeStar=staticjava:lv.lumii.datagalaxies.GalaxyEngine_webcalls#redirectToLaunchTransformationCommand
+webmemcall\ FinalizeStar=staticjava:lv.lumii.datagalaxies.GalaxyEngine_webcalls#redirectToLaunchTransformationCommand
+webmemcall\ CleanupStar=staticjava:lv.lumii.datagalaxies.GalaxyEngine_webcalls#redirectToLaunchTransformationCommand
+
+webmemcall\ VisualizePlanet=staticjava:lv.lumii.datagalaxies.GalaxyEngine_webcalls#redirectToLaunchTransformationCommand
+webmemcall\ EmitStellarWind=staticjava:lv.lumii.datagalaxies.GalaxyEngine_webcalls#redirectToLaunchTransformationCommand
+
+jsoncall\ deleteGalaxyComponents=staticjava:lv.lumii.datagalaxies.GalaxyEngine_webcalls#deleteGalaxyComponents
+jsoncall\ deployGalaxyForEndUsers=staticjava:lv.lumii.datagalaxies.GalaxyEngine_webcalls#deployGalaxyForEndUsers
+jsoncall\ inEndUserMode=staticjava:lv.lumii.datagalaxies.GalaxyEngine_webcalls#inEndUserMode
+
+# Runs...
+jsoncall\ getRunsForGalaxyComponent=staticjava:lv.lumii.datagalaxies.GalaxyEngine_webcalls#getRunsForGalaxyComponent
+jsoncall\ getRunsForCleanup=staticjava:lv.lumii.datagalaxies.GalaxyEngine_webcalls#getRunsForCleanup
+jsoncall\ runGalaxyComponentAsync=staticjava:lv.lumii.datagalaxies.GalaxyEngine_webcalls#runGalaxyComponentAsync
+
+# Edit/Refresh Galaxy Commands
+webmemcall\ EditGalaxyCommand=staticjava:lv.lumii.datagalaxies.GalaxyEngine_webcalls#prepareAndContinueEditGalaxyCommand
+webmemcall\ RefreshGalaxyCommand=staticjava:lv.lumii.datagalaxies.GalaxyEngine_webcalls#prepareAndContinueRefreshGalaxyCommand
+jsoncall\ continueEditGalaxyCommand=clientjs:executeEditGalaxyCommand
+jsoncall\ continueRefreshGalaxyCommand=clientjs:executeRefreshGalaxyCommand

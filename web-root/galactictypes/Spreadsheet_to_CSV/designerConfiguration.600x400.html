@@ -1,0 +1,93 @@
+<html>
+<head>
+<script src="/tda.js"></script>
+<script src="/jquery-1.11.1.min.js"></script>
+</head>
+<body>
+
+<b>Stellar wind name:</b> <input type="edit" id="stWindName"/><p>
+
+<b>Sheet name or index (starting from 1):</b> <input type="edit" id="sheetName"/>
+
+<script>
+
+var stellarWind = null;
+
+
+
+function load(stWind)
+{
+  stWind = tda.jsonsubmit("loadObjects", {
+    navigationExpression: ".crossFilter.*",
+    objects: [stWind]
+  })[0];
+
+  if (stWind.name)
+    document.getElementById("stWindName").value = stWind.name;
+
+  if (stWind.sheetName)
+    document.getElementById("sheetName").value = stWind.sheetName;
+
+  var map = {};
+
+  if (stWind.filtersToColumns) {
+    var a = stWind.filtersToColumns.split(";");
+    for (var i in a) {
+      var b = a[i].split(":");
+      if (b.length>=2) {
+        map[b[0]] = b[1];
+      }
+    }
+  }
+
+  if (stWind.crossFilter) {
+    for (var i in stWind.crossFilter) {
+      $("#maptable").append("<tr><td>"+stWind.crossFilter[i].name+" ("+stWind.crossFilter[i].id+")</td><td><input type='text' id='inputFor"+stWind.crossFilter[i].id+"'/></td></tr>");
+      if (stWind.crossFilter[i].id in map)
+        $("#inputFor"+stWind.crossFilter[i].id).val(map[stWind.crossFilter[i].id]);
+    }
+  }
+
+  stellarWind = stWind;
+  loadCalled = true;
+
+}
+
+function store(stWind)
+{
+  var filters = tda.jsonsubmit("loadObjects", {
+    navigationExpression: ".crossFilter.*",
+    objects: [stWind]
+  })[0].crossFilter;
+
+  stWind.state = "CONFIGURATION_OK";
+
+
+  stWind.name = document.getElementById("stWindName").value;
+  if (!stWind.name) {
+    stWind.state = "CONFIGURATION_ERROR";
+    fAfter();
+    return;
+  }
+  stWind.sheetName = document.getElementById("sheetName").value;
+
+
+  if ((!stWind.target[0].starData) || (stWind.target[0].starData.length==0)) {
+    tda.jsonsubmit("putGalacticTypeIntoMetamodel", "CSV");
+    starData = tda.jsonsubmit("CSV", {
+                  fileName:stWind.name+"result.csv",
+               });
+    stWind.target[0].starData = [starData];
+    stWind.target[0].state = "CONFIGURATION_OK";
+  }
+
+  if (!stWind.target[0].starData[0].fileName)
+    stWind.target[0].starData[0].fileName = stWind.name+"result.csv";
+
+}
+
+</script>
+
+</body>
+</html>
+

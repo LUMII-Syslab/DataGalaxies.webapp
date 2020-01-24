@@ -1,0 +1,126 @@
+<html>
+<head>
+<script src="/tda.js"></script>
+<!--script src="/jquery-1.11.1.min.js"></script-->
+</head>
+<body>
+
+<b>Cross-filter name:</b> <input type="edit" id="name"/><p>
+<b>Tree source star:</b> <select id="sourceStarSelect"></select><p>
+<b>Attribute to consider:</b> <input type="edit" id="attributeName"/><br>
+<b>Attribute to show to the user:</b> <input type="edit" id="userAttributeName"/><p>
+
+<script>
+
+var loadCalled = false;
+var innerLoadCalled = false;
+var crossFilter = null;
+
+function innerLoad()
+{
+
+  if (!loadCalled)
+    return;
+
+  crossFilter.attributeName = attributeName.value;
+  crossFilter.userAttributeName = userAttributeName.value;
+  crossFilter.sourceStarId = sourceStarSelect.value;
+
+  if (configFrame.contentWindow) {
+    if (configFrame.contentWindow.load)
+      configFrame.contentWindow.load(crossFilter);
+  }
+  else { // IE
+    if (configFrame.frameElement.contentWindow.load)
+      configFrame.frameElement.contentWindow.load(crossFilter);
+  }
+}
+
+function innerStore(crossFilter)
+{
+  if (configFrame.contentWindow) {
+    if (configFrame.contentWindow.store)
+      configFrame.contentWindow.store(crossFilter);
+  }
+  else { // IE
+    if (configFrame.frameElement.contentWindow.store)
+      configFrame.frameElement.contentWindow.store(crossFilter);
+  }
+}
+
+function load(_crossFilter)
+{
+  crossFilter = _crossFilter;
+  if (crossFilter.name)
+    document.getElementById("name").value = crossFilter.name;
+  else
+    document.getElementById("name").value = crossFilter.id;
+
+  loadCalled = true;
+
+  var starDatas = tda.jsonsubmit("findObjects", {
+    isKindOf: "JSON file"
+  });
+
+  starDatas = tda.jsonsubmit("loadObjects", {
+    navigationExpressions: [".star.*"],
+    objects: starDatas
+  });
+  if (starDatas) {
+    for (var i in starDatas) if (starDatas[i].star) {
+      sourceStarSelect.innerHTML += "<option value='"+starDatas[i].star[0].id+"'>"+starDatas[i].star[0].name+" ("+starDatas[i].star[0].id+")</option>";
+    }
+  }
+
+    if (crossFilter.sourceStarId)
+      document.getElementById("sourceStarSelect").value = crossFilter.sourceStarId;
+
+/*  if (!crossFilter.attributeName)
+    crossFilter.attributeName = "CODE";
+  if (!crossFilter.userAttributeName)
+    crossFilter.userAttributeName = "EN";*/
+
+  if (crossFilter.attributeName)
+    document.getElementById("attributeName").value = crossFilter.attributeName;
+  if (crossFilter.userAttributeName)
+    document.getElementById("userAttributeName").value = crossFilter.userAttributeName;
+
+  innerLoad();
+}
+
+function store(crossFilter)
+{
+  crossFilter.name = document.getElementById("name").value;
+  crossFilter.sourceStarId = sourceStarSelect.value;
+  crossFilter.attributeName = attributeName.value;
+  crossFilter.userAttributeName = userAttributeName.value;
+  if (!crossFilter.userAttributeName)
+    crossFilter.userAttributeName = crossFilter.attributeName;
+
+  innerStore(crossFilter);
+
+  if (!crossFilter.name) {
+    crossFilter.state = "CONFIGURATION_ERROR";
+    crossFilter.stateMessage = "The name of the cross-filter is not specified.";
+    return;
+  }
+  if (!crossFilter.sourceStarId) {
+    crossFilter.state = "CONFIGURATION_ERROR";
+    crossFilter.stateMessage = "The source star containing the tree is not specified.";
+    return;
+  }
+  if (!crossFilter.attributeName) {
+    crossFilter.state = "CONFIGURATION_ERROR";
+    crossFilter.stateMessage = "The name of the attribute to consider is not specified.";
+    return;
+  }
+  crossFilter.state = "CONFIGURATION_OK";
+}
+
+</script>
+<input type="button" value="Reload tree" onclick="configFrame.src=configFrame.src;"></input>
+<iframe id="configFrame" height="300px" width="100%" src="/galactictypes/Subtree%20filter/endUserConfiguration.html" onload="innerLoad();"/>
+
+</body>
+</html>
+

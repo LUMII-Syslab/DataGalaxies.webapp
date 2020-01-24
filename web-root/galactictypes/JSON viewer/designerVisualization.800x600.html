@@ -1,0 +1,66 @@
+<html>
+<head>
+  <script src="/webappos.js"></script>
+  <script src="/jquery.min.js"></script>
+  <meta charset="utf-8">
+
+  <script src="json-viewer/jquery.json-viewer.js"></script>
+  <link href="json-viewer/jquery.json-viewer.css" type="text/css" rel="stylesheet" />
+
+</head>
+
+<body>
+  <pre id="json-renderer"></pre>
+
+  <script>
+    function load(planet) {
+
+      var result = webappos.webcall_and_wait("webappos.getFileContentFromCurrentProjectAsUTF8String", planet.star[0].starData[0].fileName);
+      if (!result || !result.content) {
+         console.log("Could not read the planet data file "+planet.star[0].starData[0].fileName,result);
+         return;
+      }
+
+      var s = result.content;
+      try {
+        var json = JSON.parse(s);
+        var options = {
+          collapsed: false,
+          withQuotes: false,
+          withLinks: false
+        };
+        $('#json-renderer').jsonViewer(json, options);
+      }
+      catch(t) {
+        $('#json-renderer').html("Error parsing JSON - "+t);
+      }
+
+    }
+  </script>
+
+<!-- VARIANT:
+
+  <div id="outputDiv" style="font-family: 'Consolas', 'monospace'; background-color:#e3ebf3;"></div>
+
+  <script>
+    function load(planet) {
+
+      var result = webappos.webcall_and_wait("webappos.getFileContentFromCurrentProjectAsUTF8String", planet.star[0].starData[0].fileName);
+      if (!result || !result.content) {
+         console.log("Could not read the planet data file "+planet.star[0].starData[0].fileName,result);
+         return;
+      }
+
+      var s = result.content;
+      try {
+        var json = JSON.parse(s);
+        s = JSON.stringify(json, null, 2);
+      }
+      catch(t) {}
+      outputDiv.innerHTML = s.split("\n").join("<br>").split(" ").join("&nbsp;");
+    }
+  </script>
+
+-->
+</body>
+</html>

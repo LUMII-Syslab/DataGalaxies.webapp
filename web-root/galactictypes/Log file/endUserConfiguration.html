@@ -1,0 +1,49 @@
+<script src="/tda.js"></script>
+<script src="/jquery-1.11.1.min.js"></script>
+
+End-user configuration
+
+Star name: <input type="edit" id="starName" value="Log file"/>
+<p>
+Choose .log file:
+<input id="finput" type="file" accept=".log"/>
+<br>
+
+
+<script>
+
+function load(star)
+{
+
+  star = tda.jsonsubmit("loadObjects", {
+      navigationExpression : ".starData.*",
+      objects : [star]
+    }
+  )[0];
+
+  if (star.name)
+    $("#starName").value = star.name;
+
+  tda.initializeFileInput(finput, star.starData[0].fileName);
+}
+
+function store(star)
+{
+  star.name = document.getElementById("starName").value;
+  if (!star.name)
+    star.state = "CONFIGURATION_ERROR";
+
+  star.starData[0].fileName = tda.finalizeFileInput(finput, true);
+
+  if (!star.starData[0].fileName)
+    star.state = "CONFIGURATION_ERROR";
+}
+
+function cancel()
+{
+  tda.finalizeFileInput(finput, false);
+}
+
+</script>
+
+

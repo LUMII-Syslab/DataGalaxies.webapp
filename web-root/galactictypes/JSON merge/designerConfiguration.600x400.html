@@ -1,0 +1,72 @@
+<html>
+<head>
+<script src="/tda.js"></script>
+<!--script src="/jquery-1.11.1.min.js"></script-->
+</head>
+<body>
+
+<b>Stellar wind name:</b> <input type="edit" id="stWindName"/><p>
+<b>JSON attribute name(s) for identifying objects (delimited by commas):</b> <input type="edit" id="idAttributeNames" value="id"/><br>
+<div style="margin-left: 1.5em">
+  Objects will be merged by the values of one of these attributes (which is found first).
+</div><p>
+<b>Attributes to merge and their aggregations (delimited by commas):</b> <input type="edit" id="attributeNamesAndAggregations" value="id:oneof"/><br>
+<div style="margin-left: 1.5em">
+  Aggregations are used when more than one attribute value is specified for the same id.<br>
+  Possible aggregations are: <code>oneof, sum, concat, asArray, asSet, count</code>.<br>
+  Aggregations are specified using a colon and the aggregation name, which follow the attribute name, e.g.<br>
+  <code>attr1:oneof,attr2:sum,attr3,attr4:asSet,newAttr:count</code><br>
+  Default is <code>oneof</code> (used for <code>attr3</code> from above).
+</div>
+
+
+<script>
+
+var stellarWind = null;
+
+
+
+function load(stWind)
+{
+  if (stWind.name)
+    document.getElementById("stWindName").value = stWind.name;
+  if (stWind.idAttributeNames)
+    document.getElementById("idAttributeNames").value = stWind.idAttributeNames;
+
+  if (stWind.attributeNamesAndAggregations)
+    document.getElementById("attributeNamesAndAggregations").value = stWind.attributeNamesAndAggregations;
+  stellarWind = stWind;
+  loadCalled = true;
+}
+
+function store(stWind)
+{
+  stWind.name = document.getElementById("stWindName").value;
+  if (!stWind.name || !idAttributeNames.value || !attributeNamesAndAggregations.value) {
+    stWind.state = "CONFIGURATION_ERROR";
+    fAfter();
+    return;
+  }
+
+  stWind.idAttributeNames = document.getElementById("idAttributeNames").value;
+  stWind.attributeNamesAndAggregations = attributeNamesAndAggregations.value;
+
+
+  if ((!stWind.target[0].starData) || (stWind.target[0].starData.length==0)) {
+    tda.jsonsubmit("putGalacticTypeIntoMetamodel", "JSON file");
+    starData = tda.jsonsubmit("JSON file", {
+                  fileName:stWind.name+"result.json",
+               });
+    stWind.target[0].starData = [starData];
+    stWind.target[0].state = "CONFIGURATION_OK";
+  }
+
+  if (!stWind.target[0].starData[0].fileName)
+    stWind.target[0].starData[0].fileName = stWind.name+"result.json";
+}
+
+</script>
+
+</body>
+</html>
+

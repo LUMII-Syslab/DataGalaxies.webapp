@@ -1,0 +1,140 @@
+<html>
+
+<head>
+  <script src="/webappos.js"></script>
+
+  <style>
+    body {
+      font: 10pt "Trebuchet MS", sans-serif;
+    }
+  </style>
+
+</head>
+
+<body id="body">
+  (Use "Shift" or "Ctrl" to select multiple items)
+  <script>
+    function GetURLParameter(name) {
+      return decodeURIComponent((new RegExp('[?|&]' + name + '=' + '([^&;]+?)(&|#|;|$)').exec(location.search) || [,
+        ""])[1].replace(/\+/g, '%20')) || null
+    } // [source: http://stackoverflow.com/questions/11582512/how-to-get-url-parameters-with-javascript]
+
+    if (typeof String.prototype.endsWith != 'function') {
+      String.prototype.endsWith = function (str) {
+        return this.substring(this.length - str.length, this.length) === str;
+      }
+    };
+
+
+    var tree;
+
+    function myDataToTreeData(myData, parentName, treeData) {
+      if (!treeData)
+        treeData = [];
+
+      for (name in myData) {
+        if (parentName)
+          treeData.push({
+            id: name,
+            name: name,
+            parent: parentName
+          });
+        else
+          treeData.push({
+            id: name,
+            name: name
+          });
+        myDataToTreeData(myData[name], name, treeData);
+      }
+      return treeData;
+    }
+
+    function load(star) {
+
+      require([
+        "dojo/_base/window", "dojo/store/Memory",
+        "dijit/tree/ObjectStoreModel", "dijit/Tree",
+        "dojo/domReady!"
+      ], function (win, Memory, ObjectStoreModel, Tree) {
+
+        var myData = webappos.webcall_and_wait("getPossibleStarDataTypes", {});
+
+
+        // Create test store, adding the getChildren() method required by ObjectStoreModel
+        var myStore = new Memory({
+          data: myDataToTreeData(myData),
+          getChildren: function (object) {
+            return this.query({
+              parent: object.id
+            });
+          }
+        });
+
+        // Create the model
+        var myModel = new ObjectStoreModel({
+          store: myStore,
+          query: {
+            id: 'StarData'
+          }
+        });
+
+        // Create the Tree.
+        tree = new Tree({
+          model: myModel
+          //          autoExpand: true
+        });
+        tree.placeAt(win.body());
+        tree.startup();
+      });
+    } // load
+
+    var storedStar; // set in store() for finalize()
+    var newFrameLocation; // set in store() for finalize()
+
+    function store(star) {
+      star.state = "CONFIGURATION_UNKNOWN"; // the final type has not been chosen/configured yet...
+      if (tree.selectedItems.length == 0)
+        return; // no types selected
+
+      // getting current frame location...
+      var star1 = webappos.webcall_and_wait("loadObjects", {
+        navigationExpression: ".frame.*",
+        objects: [star]
+      })[0];
+
+      newFrameLocation = "popup";
+      if (star1.frame[0].location) {
+        newFrameLocation = star1.frame[0].location;
+      }
+
+
+
+      var starDataType = null;
+      for (var i = 0; i < tree.selectedItems.length; i++) {
+        if (i == 0)
+          starDataType = tree.selectedItems[i].name;
+        else
+          starDataType += "," + tree.selectedItems[i].name;
+
+        tda.jsonsubmit("putGalacticTypeIntoMetamodel", tree.selectedItems[i].name);
+      }
+      star.starDataType = starDataType;
+
+      storedStar = star;
+    }
+
+    function finalize() {
+
+      // yielding a ConfigureStar command...
+
+      let cmd = new webmem.ConfigureStar();
+      cmd.setStar(webmem[storedStar.reference]);
+      cmd.setFrameLocation(newFrameLocation);
+      webmem.submit(cmd);
+
+
+    }
+  </script>
+</body>
+
+</html>

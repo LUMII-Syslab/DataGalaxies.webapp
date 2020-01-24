@@ -1,0 +1,96 @@
+<html>
+<head>
+<script src="/tda.js"></script>
+<script src="/jquery-1.11.1.min.js"></script>
+</head>
+<body>
+<span style="float:right;"><a href="license.html" target="_blank">License</a></span><br>
+
+<b>Planet name:</b> <input type="edit" id="name"/><p>
+
+<b>Name attribute:</b> <input type="edit" id="nameAttribute"/><br>
+<b>Value attribute:</b> <input type="edit" id="valueAttribute"/><br>
+
+<p>
+<table id="maptable">
+<tr><td><b>Filter</b></td><td><b>Attribute name</b></td></tr>
+</table>
+
+<script>
+
+function load(_planet)
+{
+  planet = tda.jsonsubmit("loadObjects", {
+    navigationExpression: ".crossFilter.*",
+    objects: [_planet]
+  })[0];
+
+  if (planet.name)
+    document.getElementById("name").value = planet.name;
+
+  if (planet.nameAttribute)
+    document.getElementById("nameAttribute").value = planet.nameAttribute;
+  if (planet.valueAttribute)
+    document.getElementById("valueAttribute").value = planet.valueAttribute;
+
+  var map = {};
+
+  if (planet.filtersToAttributes) {
+    var a = planet.filtersToAttributes.split(";");
+    for (var i in a) {
+      var b = a[i].split(":");
+      if (b.length>=2) {
+        map[b[0]] = b[1];
+      }
+    }
+  }
+
+  if (planet.crossFilter) {
+    for (var i in planet.crossFilter) {
+      $("#maptable").append("<tr><td>"+planet.crossFilter[i].name+" ("+planet.crossFilter[i].id+")</td><td><input type='text' id='inputFor"+planet.crossFilter[i].id+"'/></td></tr>");
+      if (planet.crossFilter[i].id in map)
+        $("#inputFor"+planet.crossFilter[i].id).val(map[planet.crossFilter[i].id]);
+    }
+  }
+
+}
+
+function store(planet)
+{
+  var filters = tda.jsonsubmit("loadObjects", {
+    navigationExpression: ".crossFilter.*",
+    objects: [planet]
+  })[0].crossFilter;
+
+  planet.state = "CONFIGURATION_OK";
+
+  var mapstr = "";
+  for (i in filters) {
+    var v = $("#inputFor"+filters[i].id).val();
+    if (v) {
+      if (mapstr.length>0)
+        mapstr+=";";
+      mapstr += filters[i].id+":"+v;
+    }
+    else {
+      planet.state = "CONFIGURATION_ERROR";
+      planet.stateMessage = "No attribute specified for filter "+filters[i].name+" ("+filters[i].id+").";
+      return;
+    }
+  }
+  planet.filtersToAttributes = mapstr;
+
+  planet.name = document.getElementById("name").value;
+  planet.nameAttribute = document.getElementById("nameAttribute").value;
+  planet.valueAttribute = document.getElementById("valueAttribute").value;
+  if (!planet.name || !planet.nameAttribute || !planet.valueAttribute) {
+    planet.state = "CONFIGURATION_ERROR";
+    return;
+  }
+}
+
+</script>
+
+</body>
+</html>
+

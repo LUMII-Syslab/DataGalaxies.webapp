@@ -1,0 +1,178 @@
+<html>
+<!--
+      URL parameters:
+      after=configureStar
+      after=configureStellarWind
+  -->
+
+<head>
+  <script src="/dojo/dojo.js" data-dojo-config="async:0"></script>
+  <script src="/webappos.js"></script>
+
+
+
+  <style>
+    body {
+      font: 10pt "Trebuchet MS", sans-serif;
+    }
+  </style>
+
+</head>
+
+<body id="body">
+  Choose a final star data type!
+  <script>
+    function GetURLParameter(name) {
+      return decodeURIComponent((new RegExp('[?|&]' + name + '=' + '([^&;]+?)(&|#|;|$)').exec(location.search) || [,
+        ""])[1].replace(/\+/g, '%20')) || null
+    } // [source: http://stackoverflow.com/questions/11582512/how-to-get-url-parameters-with-javascript]
+
+    if (typeof String.prototype.endsWith != 'function') {
+      String.prototype.endsWith = function (str) {
+        return this.substring(this.length - str.length, this.length) === str;
+      }
+    };
+
+    var tree;
+
+    function myDataToTreeData(types, myData, parentName, treeData) {
+      if (!treeData)
+        treeData = [{
+          id: "root",
+          name: "root"
+        }];
+
+      for (name in myData) {
+        if (parentName) { // parent included, thus, we must include also this child
+          treeData.push({
+            id: name,
+            name: name,
+            parent: parentName
+          });
+          myDataToTreeData(types, myData[name], name, treeData);
+        } else {
+          // parent not included, checking for match:
+          var match = false;
+          for (var i = 0; i < types.length; i++) {
+            if (types[i] == name) {
+              // match found...
+              treeData.push({
+                id: name,
+                name: name,
+                parent: "root"
+              });
+              myDataToTreeData(types, myData[name], name, treeData);
+              break;
+            }
+          }
+
+          // search in depth...
+          myDataToTreeData(types, myData[name], null, treeData);
+        }
+      }
+      return treeData;
+    }
+
+    function load(star) {
+
+      require([
+        "dojo/_base/window", "dojo/store/Memory",
+        "dijit/tree/ObjectStoreModel", "dijit/Tree",
+        "dojo/domReady!"
+      ], function (win, Memory, ObjectStoreModel, Tree) {
+
+        var allowedTypes = star.starDataType.split(",");
+
+
+        var myData = webappos.webcall_and_wait("getPossibleStarDataTypes", {});
+
+        var treeData = myDataToTreeData(allowedTypes, {
+          StarData: myData.StarData
+        });
+
+        // Create test store, adding the getChildren() method required by ObjectStoreModel
+        var myStore = new Memory({
+          data: treeData,
+          getChildren: function (object) {
+            return this.query({
+              parent: object.id
+            });
+          }
+        });
+
+        // Create the model
+        var myModel = new ObjectStoreModel({
+          store: myStore,
+          query: {
+            id: 'root'
+          }
+        });
+
+        // Create the Tree.
+        tree = new Tree({
+          model: myModel,
+          showRoot: false
+          //          autoExpand: true
+        });
+        tree.placeAt(win.body());
+        tree.startup();
+      });
+    } // load
+
+    var storedStar; // set in store() for finalize()
+    var newFrameLocation; // set in store() for finalize()
+
+    function store(star) {
+      if (!tree.selectedItem) {
+        star.state = "CONFIGURATION_ERROR";
+        return;
+      }
+      var answer = webappos.webcall_and_wait("isFinalGalacticType", tree.selectedItem.name);
+
+      if (answer.result) {
+        star.state = "CONFIGURATION_ERROR"; // the star has not been configured yet...
+
+        // creating a star data instance...
+
+        webappos.webcall_and_wait("putGalacticTypeIntoMetamodel", tree.selectedItem.name);
+
+        var starData = new webmem[tree.selectedItem.name]();
+
+        star.starData = [{
+          reference: starData.reference
+        }];
+
+
+        // getting current frame location...
+        var star1 = webappos.webcall_and_wait("loadObjects", {
+          navigationExpression: ".frame.*",
+          objects: [star]
+        })[0];
+
+        newFrameLocation = "popup";
+        if (star1.frame[0].location) {
+          newFrameLocation = star1.frame[0].location;
+        }
+
+        storedStar = star1;
+
+      } else {
+        star.state = "CONFIGURATION_UNKNOWN";
+      }
+    }
+
+    // yielding a ConfigureStar command after the star is saved...
+    function finalize() {
+      if (!storedStar)
+        return;
+
+      let cmd = new webmem.ConfigureStar();
+      cmd.setStar(webmem[storedStar.reference]);
+      cmd.setFrameLocation(newFrameLocation);
+      webmem.submit(cmd);
+
+    }
+  </script>
+</body>
+
+</html>

@@ -1,0 +1,30 @@
+<script src="/webappos.js"></script>
+<script src="/jquery.js"></script>
+<span style="float:right;"><a href="license.html" target="_blank">License</a></span>
+Planet name: <input type="edit" id="planetName" value="Viesturs' viewer"/>
+<br>
+Style file name: <input type="file" id="styleFile" accept=".json"/>
+<br>
+<div id="styleFileValue"/>
+<p>
+<script>
+
+function load(planet)
+{
+  if (planet.name)
+    document.getElementById("planetName").value = planet.name;
+  if (planet.styleFileName) {
+    planet.styleFileName=webappos.js_util.initialize_file_input(styleFile, planet.styleFileName);
+    styleFileValue.innerHTML = "Previously chosen: "+planet.styleFileName;
+  }
+}
+
+function store(planet)
+{
+  planet.name = document.getElementById("planetName").value;
+  planet.styleFileName=webappos.js_util.upload_file_input(styleFile, webappos.project_id);
+  if (!planet.name || !planet.styleFileName)
+    planet.state = "CONFIGURATION_ERROR";
+}
+
+</script>

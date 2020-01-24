@@ -1,0 +1,95 @@
+<html>
+<head>
+<script src="/webappos.js"></script>
+<script src="/jquery.min.js"></script>
+</head>
+<body>
+
+<b>Stellar wind name:</b> <input type="edit" id="stWindName"/><p>
+<table id="maptable">
+<tr><td><b>Filter</b></td><td><b>CSV column name or index (starting from 1)</b></td></tr>
+</table>
+
+<script>
+
+
+function load(stWind)
+{
+  stWind = webmem[stWind.reference];
+
+  if (stWind.name)
+    document.getElementById("stWindName").value = stWind.name;
+
+  var map = {};
+
+  if (stWind.filtersToColumns) {
+    var a = stWind.filtersToColumns.split(";");
+    for (var i in a) {
+      var b = a[i].split(":");
+      if (b.length>=2) {
+        map[b[0]] = b[1];
+      }
+    }
+  }
+
+  if (stWind.crossFilter) {
+    for (var i in stWind.crossFilter) {
+      $("#maptable").append("<tr><td>"+stWind.crossFilter[i].name+" ("+stWind.crossFilter[i].id+")</td><td><input type='text' id='inputFor"+stWind.crossFilter[i].id+"'/></td></tr>");
+      if (stWind.crossFilter[i].id in map)
+        $("#inputFor"+stWind.crossFilter[i].id).val(map[stWind.crossFilter[i].id]);
+    }
+  }
+
+  loadCalled = true;
+
+}
+
+function store(stWind)
+{
+  var filters = webmem[stWind.reference].getCrossFilter();
+
+  stWind.state = "CONFIGURATION_OK";
+
+  var mapstr = "";
+  for (i in filters) {
+    var v = $("#inputFor"+filters[i].id).val();
+    if (v) {
+      if (mapstr.length>0)
+        mapstr+=";";
+      mapstr += filters[i].id+":"+v;
+    }
+    else {
+      stWind.state = "CONFIGURATION_ERROR";
+      stWind.stateMessage = "No column specified for filter "+filters[i].name+" ("+filters[i].id+").";
+    }
+  }
+//  alert("value for map "+mapstr);
+  stWind.filtersToColumns = mapstr;
+
+  stWind.name = document.getElementById("stWindName").value;
+  if (!stWind.name) {
+    stWind.state = "CONFIGURATION_ERROR";
+    fAfter();
+    return;
+  }
+
+
+  if ((!stWind.target[0].starData) || (stWind.target[0].starData.length==0)) {
+    webappos.webcall("putGalacticTypeIntoMetamodel", "CSV").then(function() {
+      var starData = new webmem.CSV();
+      starData.setFileName(stWind.name+"result.csv");
+      webmem[stWind.reference].target[0].linkStarData(starData);
+      webmem[stWind.reference].target[0].setState("CONFIGURATION_OK");
+    });
+  }
+  else {
+    if (!stWind.target[0].starData[0].fileName)
+      stWind.target[0].starData[0].fileName = stWind.name+"result.csv";
+  }
+}
+
+</script>
+
+</body>
+</html>
+

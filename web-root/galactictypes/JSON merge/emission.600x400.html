@@ -1,0 +1,329 @@
+<html>
+<head>
+<script src="/tda.js"></script>
+<script src="/jquery-1.11.1.min.js"></script>
+</head>
+<body>
+Merging <span id="NNN"></span> JSONs...
+
+<script id="getParentTag">
+</script>
+<script>
+
+var stellarWind = null;
+var fAfter = null;
+
+function getId(json, idAttributeNames)
+{
+  for (var i in idAttributeNames)
+    if (json[idAttributeNames[i]]) {
+      return json[idAttributeNames[i]];
+    }
+
+  return null; // no id attribute found
+}
+
+function recurse(json, childParentMap, childAttrMap, idObjectMap, idAttributeNames, attributeNamesAndAggregations, countAttributes)
+{
+  var id = getId(json, idAttributeNames);
+  if (id == null) {
+    // ignore this object, but check the children...
+    for (var attr in json) {
+      if ($.isArray(json[attr])) { // children found
+        var children = json[attr];
+        for (var i in children)
+          recurse(children[i], childParentMap, childAttrMap, idObjectMap, idAttributeNames, attributeNamesAndAggregations, countAttributes);
+      }
+    }
+    return; 
+  }
+
+  // id may contain multiple id-s delimited by space, comma, or semicolon
+  var ids = id.split(";").join(",").split(",");
+//  if (ids.length>1) console.log("MULTIPLE IDS "+ids.join("+"));
+
+for (var iii in ids) {
+  id = ids[iii]; // repeat with each id...
+
+  if (!(id in idObjectMap)) {
+    idObjectMap[id] = {};
+  }
+
+  // creating count attributes...
+  for (var i in countAttributes) {
+    if (!(countAttributes[i] in json)) {
+      json[countAttributes[i]] = 1;
+    }
+  }
+
+  // copy attributes from this object and check for children...
+
+  for (var attr in json) {
+    if ($.isArray(json[attr])) { // children found
+      var children = json[attr];
+      for (var i in children) {
+        var cid = getId(children[i], idAttributeNames);
+        if (cid == null) {
+          // this child doesn't have an id - it will be checked for children in the following recurse call...
+          recurse(children[i], childParentMap, childAttrMap, idObjectMap, idAttributeNames, attributeNamesAndAggregations, countAttributes);
+          continue; 
+        }
+        if (cid in childParentMap) {
+          if (childParentMap[cid] != id)
+            continue; // ignore that child since parents differ
+          if (childAttrMap[cid] != attr)
+            continue; // ignore that child since attributes differ
+        }
+        else {
+          childParentMap[cid] = id;
+          childAttrMap[cid] = attr;
+        }
+        recurse(children[i], childParentMap, childAttrMap, idObjectMap, idAttributeNames, attributeNamesAndAggregations, countAttributes);
+      }
+    }
+    else { // just copy attr val or append the new value, if there are multiple values
+      if (!(attr in attributeNamesAndAggregations))
+        continue; // we do not need to aggregate this attribute...
+
+      if (!(attr in idObjectMap[id])) {
+        // setting the value for the first time...
+        var agg = attributeNamesAndAggregations[attr];
+        if (agg=="count")
+          idObjectMap[id][attr]=1;
+        else
+          idObjectMap[id][attr] = json[attr];
+      }
+      else
+      {
+        // aggregating the values (for the second time and other times)...
+        var agg = attributeNamesAndAggregations[attr];
+
+        if (agg == "oneof")
+          continue; // keep the first value
+
+        if (agg == "sum") {
+          var wasValue, addValue;
+          try {
+            wasValue = parseFloat(idObjectMap[id][attr]);
+            addValue = parseFloat(json[attr]);
+          }
+          catch(exc) {
+          }                    
+          if (wasValue && addValue) {
+
+            // a number found; summing up using Kahan sum...
+            if (!(("KahanCompensationFor_"+attr) in idObjectMap[id]))
+              idObjectMap[id]["KahanCompensationFor_"+attr] = 0.0;
+
+            var y = addValue - idObjectMap[id]["KahanCompensationFor_"+attr];
+            var t = wasValue + y;
+            idObjectMap[id]["KahanCompensationFor_"+attr] = (t-wasValue) - y;
+
+            idObjectMap[id][attr] = t+"";
+          }
+          continue;
+        } // sum
+
+        if (agg == "concat") {
+          idObjectMap[id][attr] += ", "+json[attr];
+          continue;
+        }
+
+        if (agg == "asarray") {
+          if (!($.isArray(idObjectMap[id][attr]))) {
+            idObjectMap[id][attr] = [ idObjectMap[id][attr] ];
+          }
+          idObjectMap[id][attr].push(json[attr]);
+          continue;
+        }
+
+        if (agg == "asset") { // asSet
+          if (!($.isArray(idObjectMap[id][attr]))) {
+            idObjectMap[id][attr] = [ idObjectMap[id][attr] ];
+          }
+          if (idObjectMap[id][attr].indexOf(json[attr]) == -1) // if that value does not exist yet, adding it...
+            idObjectMap[id][attr].push(json[attr]);
+          continue;
+        }
+
+        if (agg == "count") {
+          var wasValue;
+          try {
+            wasValue = parseInt(idObjectMap[id][attr]);
+          }
+          catch(exc) {
+            wasValue = 0;
+          }                    
+          idObjectMap[id][attr] = wasValue+1;
+          continue;
+        } // sum
+
+      }
+    }
+  }
+
+  // removing "KahanCompensationFor_..." from the result...
+  for (var key in idObjectMap[id])
+    if (key.substr(0, 21)=="KahanCompensationFor_")
+      delete idObjectMap[id][key];
+}
+}
+
+function emitAsync(_stWind, _fAfter)
+{
+  stellarWind = _stWind;
+  fAfter = _fAfter;
+  if (stellarWind.source.length == 0) {
+    stellarWind.state = "RUN_ERROR";
+    stellarWind.stateMessage = "There must be at least one source star to merge.";
+    finalized = true;
+    fAfter();
+    return;
+  }
+
+  for (var i in stellarWind.source)
+    if (!stellarWind.source[i].starData || !stellarWind.source[i].starData) {
+      stellarWind.state = "RUN_ERROR";
+      stellarWind.stateMessage = "StarData for one of the source stars not found.";
+      finalized = true;
+      fAfter();
+      return;
+    }
+
+  if (!stellarWind.target[0].starData) {
+    stellarWind.state = "RUN_ERROR";
+    stellarWind.stateMessage = "StarData for the target star not found.";
+    finalized = true;
+    fAfter();
+    return;
+  }
+
+
+  if ( (typeof (stellarWind.idAttributeNames) == 'undefined')||
+       (!stellarWind.attributeNamesAndAggregations) ||
+       (typeof (stellarWind.attributeNamesAndAggregations) == 'undefined')||
+       (!stellarWind.attributeNamesAndAggregations) )
+  {
+    stellarWind.state = "RUN_ERROR";
+    stellarWind.stateMessage = "Attribute name(s) not specified.";
+    finalized = true;
+    fAfter();
+    return;
+  }
+
+  if (!stellarWind.target[0].starData[0].fileName) {
+    stellarWind.state = "RUN_ERROR";
+    stellarWind.stateMessage = "Target file name is not specified.";
+    finalized = true;
+    fAfter();
+    return;
+  }
+
+
+  stellarWind.state = "RUNNING";
+
+  
+  var childParentMap = {};
+  var childAttrMap = {}; // by which attr the given child is a child of its parent
+  var idObjectMap = {};
+  var idAttributeNames = stellarWind.idAttributeNames.split(",");
+  for (var i in idAttributeNames)
+    idAttributeNames[i] = idAttributeNames[i].trim();
+
+
+  var arr = stellarWind.attributeNamesAndAggregations.split(",");
+  var attributeNamesAndAggregations = {};
+  var countAttributes = [];
+  for (var i in arr) {
+    var q = arr[i].split(":");
+    if (q.length>=2) {
+      attributeNamesAndAggregations[q[0]] = q[1].toLowerCase();
+     if (q[1].toLowerCase() == "count")  {
+       countAttributes.push(q[0]);
+     }
+    }
+    else
+      attributeNamesAndAggregations[q[0]] = "oneof";
+
+  }
+
+  NNN.value = ""+stellarWind.source.length;
+
+  for (var i in stellarWind.source) {
+    var sFile = tda.fileContentAsUTF8String(stellarWind.source[i].starData[0].fileName);
+    var src;
+    try {
+      src = JSON.parse(sFile);
+    }
+    catch(ttt) {
+      alert("could not parse source json");
+      stellarWind.state = "RUN_ERROR";
+      stellarWind.stateMessage = "Could not parse source JSON.";
+      finalized = true;
+      fAfter();
+      return;
+    }
+
+    if ($.isArray(src)) {
+      for (var j in src) {
+        recurse(src[j], childParentMap, childAttrMap, idObjectMap, idAttributeNames, attributeNamesAndAggregations, countAttributes);
+      }
+    }
+    else
+      recurse(src, childParentMap, childAttrMap, idObjectMap, idAttributeNames, attributeNamesAndAggregations, countAttributes);
+  }
+  var resultJson = [];
+  // adding parent-child relationship...
+  for (var cid in idObjectMap) {
+    var pid = childParentMap[cid];
+    if (pid) {
+      var attr = childAttrMap[cid];
+      if (!(attr in idObjectMap[pid]))
+        idObjectMap[pid][attr] = [];
+      // adding the child to the parent...
+      idObjectMap[pid][attr].push(idObjectMap[cid]);
+    }
+    else {
+      resultJson.push(idObjectMap[cid]); // the child does not have a parent and is a root
+    }
+  }
+
+  var result = tda.fileUploadFromString(stellarWind.target[0].starData[0].fileName, JSON.stringify(resultJson,null,2));
+//  console.log("file upload "+stellarWind.target[0].starData[0].fileName+" res="+result);
+
+  if (result) {
+    stellarWind.state = 'RUN_OK';
+    stellarWind.target[0].state = "RUN_OK";
+  }
+  else {
+    stellarWind.state = 'RUN_ERROR';
+    stellarWind.target[0].state = "CONFIGURATION_OK";
+  }
+  finalized = true;
+  fAfter();
+
+}
+
+
+var finalized = false;
+
+function finalize()
+{
+  if (finalized)
+    return;
+  finalized = true;
+
+  if (stellarWind && (stellarWind.state=="RUNNING")) {
+    stellarWind.state = "RUN_ERROR";
+    stellarWind.stateMessage = "Run cancelled.";
+    tda.jsonsubmit("storeObjects", [stellarWind]);
+  }
+
+  if (fAfter)
+    fAfter();
+}
+
+</script>
+
+</body>
+</html>

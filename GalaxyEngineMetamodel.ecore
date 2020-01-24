@@ -1,0 +1,159 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<ecore:EPackage xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore" name="GalaxyEngineMetamodel" nsURI="http:///lv.lumii.tda.galaxyenginemetamodel.5b732f0f-c644-4e9a-82ab-aae1f2ceb8c6" nsPrefix="lv.lumii.datagalaxies.mm">
+  <eClassifiers xsi:type="ecore:EClass" name="LaunchTransformationCommand" eSuperTypes="//Command">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="uri" unsettable="true">
+      <eType xsi:type="ecore:EDataType" href="http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    </eStructuralFeatures>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="Command"/>
+  <eClassifiers xsi:type="ecore:EClass" name="GalaxyEngine">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="onRunEvent" unsettable="true">
+      <eType xsi:type="ecore:EDataType" href="http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="useGalacticIcons" unsettable="true">
+      <eType xsi:type="ecore:EDataType" href="http://www.eclipse.org/emf/2002/Ecore#//EBoolean"/>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="dataGalaxy" upperBound="-1" eType="//DataGalaxy" eOpposite="//DataGalaxy/galaxyEngine"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="DataGalaxy">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="layoutInfo" unsettable="true">
+      <eType xsi:type="ecore:EDataType" href="http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="galaxyComponent" upperBound="-1" eType="//GalaxyComponent" eOpposite="//GalaxyComponent/dataGalaxy"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="galaxyEngine" eType="//GalaxyEngine" eOpposite="//GalaxyEngine/dataGalaxy"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="frame" upperBound="-1" eType="//Frame" eOpposite="//Frame/dataGalaxy"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="editGalaxyCommand" upperBound="-1" eType="//EditGalaxyCommand" eOpposite="//EditGalaxyCommand/dataGalaxy"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="runConfiguration" upperBound="-1" eType="//RunConfiguration" eOpposite="//RunConfiguration/dataGalaxy"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="activeRunConfiguration" upperBound="-1" eType="//RunConfiguration" eOpposite="//RunConfiguration/dg1"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="refreshGalaxyCommand" upperBound="-1" eType="//RefreshGalaxyCommand" eOpposite="//RefreshGalaxyCommand/dataGalaxy"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="GalaxyComponent">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="id" unsettable="true">
+      <eType xsi:type="ecore:EDataType" href="http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="name" unsettable="true">
+      <eType xsi:type="ecore:EDataType" href="http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="state" unsettable="true">
+      <eType xsi:type="ecore:EDataType" href="http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="stateMessage" unsettable="true">
+      <eType xsi:type="ecore:EDataType" href="http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="location" unsettable="true">
+      <eType xsi:type="ecore:EDataType" href="http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="dataGalaxy" eType="//DataGalaxy" eOpposite="//DataGalaxy/galaxyComponent"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="rc1" upperBound="-1" eType="//RunConfiguration" eOpposite="//RunConfiguration/visibleComponent"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="rc2" upperBound="-1" eType="//RunConfiguration" eOpposite="//RunConfiguration/mustConfigureComponent"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="rc3" upperBound="-1" eType="//RunConfiguration" eOpposite="//RunConfiguration/deactivatedComponent"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="refreshGalaxyCommand" upperBound="-1" eType="//RefreshGalaxyCommand" eOpposite="//RefreshGalaxyCommand/modifiedComponent"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="frame" upperBound="-1" eType="//Frame" eOpposite="//Frame/galaxyComponent"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="RunConfiguration">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="name" unsettable="true">
+      <eType xsi:type="ecore:EDataType" href="http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="description" unsettable="true">
+      <eType xsi:type="ecore:EDataType" href="http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="visibleComponent" upperBound="-1" eType="//GalaxyComponent" eOpposite="//GalaxyComponent/rc1"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="mustConfigureComponent" upperBound="-1" eType="//GalaxyComponent" eOpposite="//GalaxyComponent/rc2"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="deactivatedComponent" upperBound="-1" eType="//GalaxyComponent" eOpposite="//GalaxyComponent/rc3"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="dataGalaxy" eType="//DataGalaxy" eOpposite="//DataGalaxy/runConfiguration"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="dg1" upperBound="-1" eType="//DataGalaxy" eOpposite="//DataGalaxy/activeRunConfiguration"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="Star" eSuperTypes="//GalaxyComponent">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="emptyOnInit" unsettable="true">
+      <eType xsi:type="ecore:EDataType" href="http://www.eclipse.org/emf/2002/Ecore#//EBoolean"/>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="starDataType" unsettable="true">
+      <eType xsi:type="ecore:EDataType" href="http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="planet" upperBound="-1" eType="//Planet" eOpposite="//Planet/star"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="consumer" upperBound="-1" eType="//StellarWind" eOpposite="//StellarWind/source"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="producer" upperBound="-1" eType="//StellarWind" eOpposite="//StellarWind/target"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="starData" upperBound="-1" eType="//StarData" eOpposite="//StarData/star"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="configureStar" upperBound="-1" eType="//ConfigureStar" eOpposite="//ConfigureStar/star"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="initializeStar" upperBound="-1" eType="//InitializeStar" eOpposite="//InitializeStar/star"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="finalizeStar" upperBound="-1" eType="//FinalizeStar" eOpposite="//FinalizeStar/star"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="cleanupStar" upperBound="-1" eType="//CleanupStar" eOpposite="//CleanupStar/star"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="Planet" eSuperTypes="//GalaxyComponent">
+    <eStructuralFeatures xsi:type="ecore:EReference" name="star" upperBound="-1" eType="//Star" eOpposite="//Star/planet"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="crossFilter" upperBound="-1" eType="//CrossFilter" eOpposite="//CrossFilter/planet"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="configurePlanet" upperBound="-1" eType="//ConfigurePlanet" eOpposite="//ConfigurePlanet/planet"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="visualizePlanet" upperBound="-1" eType="//VisualizePlanet" eOpposite="//VisualizePlanet/planet"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="StellarWind" eSuperTypes="//GalaxyComponent">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="description" unsettable="true">
+      <eType xsi:type="ecore:EDataType" href="http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="source" upperBound="-1" eType="//Star" eOpposite="//Star/consumer"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="target" upperBound="-1" eType="//Star" eOpposite="//Star/producer"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="crossFilter" upperBound="-1" eType="//CrossFilter" eOpposite="//CrossFilter/stellarWind"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="configureStellarWind" upperBound="-1" eType="//ConfigureStellarWind" eOpposite="//ConfigureStellarWind/stellarWind"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="emitStellarWind" upperBound="-1" eType="//EmitStellarWind" eOpposite="//EmitStellarWind/stellarWind"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="CrossFilter" eSuperTypes="//GalaxyComponent">
+    <eStructuralFeatures xsi:type="ecore:EReference" name="planet" upperBound="-1" eType="//Planet" eOpposite="//Planet/crossFilter"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="stellarWind" upperBound="-1" eType="//StellarWind" eOpposite="//StellarWind/crossFilter"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="configureCrossFilter" upperBound="-1" eType="//ConfigureCrossFilter" eOpposite="//ConfigureCrossFilter/crossFilter"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="StarData">
+    <eStructuralFeatures xsi:type="ecore:EReference" name="star" eType="//Star" eOpposite="//Star/starData"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="ConfigurePlanet" eSuperTypes="//LaunchTransformationCommand">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="frameLocation" unsettable="true">
+      <eType xsi:type="ecore:EDataType" href="http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="planet" upperBound="-1" eType="//Planet" eOpposite="//Planet/configurePlanet"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="VisualizePlanet" eSuperTypes="//LaunchTransformationCommand">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="frameLocation" unsettable="true">
+      <eType xsi:type="ecore:EDataType" href="http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="planet" upperBound="-1" eType="//Planet" eOpposite="//Planet/visualizePlanet"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="ConfigureStar" eSuperTypes="//LaunchTransformationCommand">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="frameLocation" unsettable="true">
+      <eType xsi:type="ecore:EDataType" href="http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="star" upperBound="-1" eType="//Star" eOpposite="//Star/configureStar"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="InitializeStar" eSuperTypes="//LaunchTransformationCommand">
+    <eStructuralFeatures xsi:type="ecore:EReference" name="star" upperBound="-1" eType="//Star" eOpposite="//Star/initializeStar"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="ConfigureCrossFilter" eSuperTypes="//LaunchTransformationCommand">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="frameLocation" unsettable="true">
+      <eType xsi:type="ecore:EDataType" href="http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="crossFilter" upperBound="-1" eType="//CrossFilter" eOpposite="//CrossFilter/configureCrossFilter"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="ConfigureStellarWind" eSuperTypes="//LaunchTransformationCommand">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="frameLocation" unsettable="true">
+      <eType xsi:type="ecore:EDataType" href="http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="stellarWind" upperBound="-1" eType="//StellarWind" eOpposite="//StellarWind/configureStellarWind"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="EmitStellarWind" eSuperTypes="//LaunchTransformationCommand">
+    <eStructuralFeatures xsi:type="ecore:EReference" name="stellarWind" upperBound="-1" eType="//StellarWind" eOpposite="//StellarWind/emitStellarWind"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="EditGalaxyCommand" eSuperTypes="//Command">
+    <eStructuralFeatures xsi:type="ecore:EReference" name="dataGalaxy" upperBound="-1" eType="//DataGalaxy" eOpposite="//DataGalaxy/editGalaxyCommand"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="Frame">
+    <eStructuralFeatures xsi:type="ecore:EReference" name="dataGalaxy" upperBound="-1" eType="//DataGalaxy" eOpposite="//DataGalaxy/frame"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="galaxyComponent" upperBound="-1" eType="//GalaxyComponent" eOpposite="//GalaxyComponent/frame"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="RefreshGalaxyCommand" eSuperTypes="//Command">
+    <eStructuralFeatures xsi:type="ecore:EReference" name="modifiedComponent" upperBound="-1" eType="//GalaxyComponent" eOpposite="//GalaxyComponent/refreshGalaxyCommand"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="dataGalaxy" upperBound="-1" eType="//DataGalaxy" eOpposite="//DataGalaxy/refreshGalaxyCommand"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="FinalizeStar" eSuperTypes="//LaunchTransformationCommand">
+    <eStructuralFeatures xsi:type="ecore:EReference" name="star" upperBound="-1" eType="//Star" eOpposite="//Star/finalizeStar"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="CleanupStar" eSuperTypes="//LaunchTransformationCommand">
+    <eStructuralFeatures xsi:type="ecore:EReference" name="star" upperBound="-1" eType="//Star" eOpposite="//Star/cleanupStar"/>
+  </eClassifiers>
+</ecore:EPackage>

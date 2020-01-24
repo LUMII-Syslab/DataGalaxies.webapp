@@ -1,0 +1,183 @@
+<!doctype html>
+<!--
+      This file is used by the DataGalaxiesApp.emitViaHTML web call.
+      When some DataGalaxy component specifies this URI as a value for the
+      emissionURI, this
+      helper file is displayed. This file will load the corresponding
+      stellar wind object into the galaxyComponent JavaScript object and
+      will load the file
+        emission.html (or emission.800x600.html, where 800x600 is the size of the html div).
+      This file should implement the emit() function
+      that will be called when necessary. The argument passed will be
+      a stellar wind object, parsed into JavaScript from TDA JSON syntax.
+
+      The URL parameters passed are:
+      * fileName=html-file-name-to-display
+      * id=galaxy-component-id
+      * frameReference=frame-reference-to-close-the-frame-on-cancel
+  -->
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <script src="/jquery.js"></script>
+  <script src="/dojo/dojo.js" data-dojo-config="async:0"></script>
+  <script type="text/javascript" src="/webappos.js"></script>
+
+  <style media="screen" type="text/css">
+    html {
+      font-size: 1.0em;
+      background: #fff;
+      font-family: Tahoma, Verdana, Arial, sans-serif;
+      border: 0;
+      padding: 0;
+      margin: 0;
+    }
+
+    body {
+      font-size: 1.0em;
+      border: 0;
+      padding: 0;
+      margin: 0;
+    }
+  </style>
+</head>
+
+
+<script>
+  function GetURLParameter(name) {
+    return decodeURIComponent((new RegExp('[?|&]' + name + '=' + '([^&;]+?)(&|#|;|$)').exec(location.search) || [, ""])[
+      1].replace(/\+/g, '%20')) || null
+  } // [source: http://stackoverflow.com/questions/11582512/how-to-get-url-parameters-with-javascript]
+
+  if (typeof String.prototype.endsWith != 'function') {
+    String.prototype.endsWith = function (str) {
+      return this.substring(this.length - str.length, this.length) === str;
+    }
+  };
+
+  var galaxyComponent;
+  // a JavaScript object conforming to TDA JSON syntax
+
+
+  function fAfter() {
+
+    let ev = new webmem.CloseFrameRequestedEvent();
+    ev.setForce(true);
+    ev.linkFrame(webmem[parseInt(GetURLParameter('frameReference'))]);
+    webmem.submit(ev);
+
+    webappos.webcall_and_wait("storeObjects", [galaxyComponent]);
+
+    let cmd = new webmem.RefreshGalaxyCommand();
+    cmd.setDataGalaxy(webmem.DataGalaxy.getFirstObject());
+    webmem.submit(cmd);
+
+
+
+
+  }
+
+
+  function onFrameLoad() {
+    var async = false;
+
+    galaxyComponent.state = "RUN_OK";
+
+    if (configFrame.contentWindow) {
+      if (configFrame.contentWindow.emit)
+        configFrame.contentWindow.emit(galaxyComponent);
+      // the emit() function must be implemented in the inner html file
+      else
+      if (configFrame.contentWindow.emitAsync) {
+        async = true;
+        configFrame.contentWindow.emitAsync(galaxyComponent, fAfter);
+      }
+    } else { // IE
+      if (configFrame.frameElement.contentWindow.emit)
+        configFrame.frameElement.contentWindow.emit(galaxyComponent);
+      // the emit() function must be implemented in the inner html file
+      else
+      if (configFrame.frameElement.contentWindow.emitAsync) {
+        async = true;
+        configFrame.frameElement.contentWindow.emitAsync(galaxyComponent, fAfter);
+      }
+    }
+
+    if (!async)
+      fAfter();
+  }
+
+  $(document).ready(function () {
+
+    // loading configuration into the galaxyComponent object...
+    galaxyComponent = webappos.webcall_and_wait("findObjects", {
+      isKindOf: "GalaxyComponent",
+      id: GetURLParameter("id")
+    })[0];
+
+    galaxyComponent = webappos.webcall_and_wait("loadObjects", {
+      navigationExpressions: [
+        // adding the corresponding cross-filters (for stellar winds)
+        ".crossFilter.*",
+        // adding the corresponding source and target stars and their star data (for stellar winds)
+        ".source.*",
+        ".target.*",
+        ".source.starData.*",
+        ".target.starData.*",
+      ],
+      object: galaxyComponent
+    });
+
+    delete galaxyComponent.dataGalaxy;
+
+
+    $("#configFrame").attr("src", encodeURI(GetURLParameter('fileName')));
+    $("#configFrame").attr("style", "border: 0; width: 100%; height: 100%");
+
+
+
+    $("#configFrame").attr("onload", "onFrameLoad();");
+    // the emit() function must be implemented in the inner html file
+
+
+    bodyResized();
+
+  });
+
+
+  function bodyResized() {
+    configFrameDiv.style.height = document.body.parentElement.clientHeight - footer.offsetHeight + "px";
+  };
+
+  function finalize() {
+    if (configFrame.contentWindow) {
+      if (configFrame.contentWindow.finalize) {
+        configFrame.contentWindow.finalize(galaxyComponent);
+      }
+    } else { // IE
+      if (configFrame.frameElement.contentWindow.finalize)
+        configFrame.frameElement.contentWindow.finalize(galaxyComponent);
+    }
+
+    let cmd = new webmem.RefreshGalaxyCommand();
+    cmd.setModifiedComponent(webmem[galaxyComponent.reference]);
+    cmd.setDataGalaxy(webmem.DataGalaxy.getFirstObject());
+    webmem.submit(cmd);
+
+  }
+</script>
+
+<body id="body" style="margin:0;border:0;padding:0;height:100%;" onresize="bodyResized();">
+
+  <div id="configFrameDiv" style="border:0;padding:0;margin:0;overflow-x: hidden; overflow-y: hidden;">
+    <iframe id="configFrame" style="width:100%; height:100%; margin:0; border:0; padding:0;">
+    </iframe>
+  </div>
+  <div id="footer" style="width:100%; padding:0; padding-bottom:0;">
+  </div>
+
+
+</body>
+
+</html>

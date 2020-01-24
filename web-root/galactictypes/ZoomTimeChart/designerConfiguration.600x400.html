@@ -1,0 +1,51 @@
+<html>
+<head>
+<script src="/tda.js"></script>
+<script src="/jquery-1.11.1.min.js"></script>
+</head>
+<body>
+<span style="float:right;"><a href="license.html" target="_blank">License</a></span><br>
+
+<b>Planet name:</b> <input type="edit" id="name"/><p>
+
+<b>Date attribute name:</b> <input type="edit" id="dateAttributeName"/><br>
+<b>Value attribute name:</b> <input type="edit" id="valueAttributeName"/><br>
+<!--<b>Show count:</b> <input type="checkbox" id="showCount" checked/>-->
+
+<script>
+
+
+function load(planet)
+{
+  if (planet.name)
+    document.getElementById("name").value = planet.name;
+
+  if (planet.dateAttributeName)
+    document.getElementById("dateAttributeName").value = planet.dateAttributeName;
+  if (planet.valueAttributeName)
+    document.getElementById("valueAttributeName").value = planet.valueAttributeName;
+//  if (planet.showCount)
+//    document.getElementById("showCount").checked = planet.showCount;
+
+}
+
+function store(planet)
+{
+  planet.state = "CONFIGURATION_OK";
+
+
+  planet.name = document.getElementById("name").value;
+  planet.dateAttributeName = document.getElementById("dateAttributeName").value;
+  planet.valueAttributeName = document.getElementById("valueAttributeName").value;
+  if (!planet.name || !planet.dateAttributeName || !planet.valueAttributeName) {
+    planet.state = "CONFIGURATION_ERROR";
+    return;
+  }
+  //planet.showCount = document.getElementById("showCount").checked;
+}
+
+</script>
+
+</body>
+</html>
+

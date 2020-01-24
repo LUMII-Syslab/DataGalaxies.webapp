@@ -1,0 +1,200 @@
+<html>
+<head>
+<script src="/dojo/dojo.js" data-dojo-config="async:0"></script>
+<link rel="stylesheet" href="/dijit/themes/dijit.css" media="screen">
+<link rel="stylesheet" href="/dijit/themes/claro/claro.css" media="screen">
+<script src="/tda.js"></script>
+<script src="/jquery-1.11.1.min.js"></script>
+</head>
+<body class="claro">
+<script>
+
+var attributeName;
+var userAttributeName;
+
+var parentMap = {};
+var childrenMap = {};
+
+function jsonToTreeData(json, parentId, treeData)
+{
+  if (!treeData)
+    treeData = [];
+
+  if (!(attributeName in json))
+    return treeData;
+
+  if (!(userAttributeName in json))
+    json[userAttributeName] = json[attributeName];
+
+  if (parentId) {
+    console.log("push p "+json[attributeName]+" "+json[userAttributeName]+" "+parentId);
+    treeData.push( { id:json[attributeName], name:json[userAttributeName], parent:parentId } );
+    parentMap[json[attributeName]] = parentId;
+    if (!(parentId in childrenMap))
+      childrenMap[parentId] = [];
+    childrenMap[parentId].push(json[attributeName]);
+  }
+  else {
+    console.log("push c "+json[attributeName]+" "+json[userAttributeName]);
+    treeData.push( { id:json[attributeName], name:json[userAttributeName] } );
+  }
+
+  for (var attr in json) {
+    if ($.isArray(json[attr])) {
+      // found attribute containing children...
+      console.log("children attr="+attr);
+      console.log("my attr="+json[attributeName]+" ["+attributeName+"]");
+      for (var i in json[attr])
+        jsonToTreeData(json[attr][i], json[attributeName], treeData);
+
+      break;
+    }
+  }
+  return treeData;
+}
+
+
+function load(crossFilter)
+{
+  attributeName = crossFilter.attributeName;
+  userAttributeName = crossFilter.userAttributeName;
+
+  if (!attributeName)
+    attributeName = "id";
+  if (!userAttributeName)
+    userAttributeName = "name";
+
+  var stars = tda.jsonsubmit("findObjects", {
+    isKindOf: "Star",
+    id : crossFilter.sourceStarId
+  });
+
+  stars = tda.jsonsubmit("loadObjects", {
+    navigationExpression: "starData.*",
+    objects: stars
+  });
+
+  var json = {};
+
+  if (!stars || (stars.length==0)) {
+  }
+  else {
+    var jsonS = tda.fileContentAsUTF8String(stars[0].starData[0].fileName);
+    try {
+      json = JSON.parse(jsonS);
+    }
+    catch(t) {
+    }
+  }
+
+
+  if ($.isArray(json)) {
+    // creating root node...
+    var json1 = { children:json };
+    json1[attributeName] = "root";
+    json1[userAttributeName] = "Select all";
+    json = json1;
+  }
+  else {
+    if (!(attributeName in json))
+      json[attributeName] = "root";
+    if (!(userAttributeName in json))
+      json[userAttributeName] = "Select all";
+  }
+
+  var treeData = jsonToTreeData(json);
+
+  require([
+      "dojo/_base/window", "dojo/store/Memory",
+      "dijit/tree/ObjectStoreModel", "dijit/Tree",
+      "/tda.js",
+      "dojo/domReady!"
+  ], function(win, Memory, ObjectStoreModel, Tree){
+
+      // Create test store, adding the getChildren() method required by ObjectStoreModel
+      var myStore = new Memory({
+          data: treeData,
+          getChildren: function(object){
+              return this.query({parent: object.id});
+          }
+      });
+
+      // Create the model
+      var myModel = new ObjectStoreModel({
+          store: myStore,
+          query: {id: json[attributeName]}
+      });
+
+      // Create the Tree.
+      tree = new Tree({
+          model: myModel
+//          autoExpand: true
+      });
+      tree.placeAt(win.body());
+      tree.startup();
+
+      if (crossFilter.selectedValues) {
+        var paths = [];
+        var a = crossFilter.selectedValues.split(";");
+        for (var i in treeData)
+          for (var j in a) if (treeData[i].id == a[j]) {
+            var path = [];
+            var id = a[j];
+            for (;;) {
+              path.unshift(id);
+              id = parentMap[id];
+              if (!id)
+                break;
+            }
+            paths.push(path);
+          }
+        tree.set('paths', paths);
+      }
+  });
+
+}
+
+
+function addDescendants(s, id)
+{
+  for (var i in childrenMap[id]) {
+    if (childrenMap[id][i] in s)
+      continue;
+    s[childrenMap[id][i]] = 1;
+    addDescendants(s, childrenMap[id][i]);
+  }
+}
+
+function store(crossFilter)
+{
+  var selectedValues = "";
+
+  var s = {};
+
+  for (var i=0; i<tree.selectedItems.length; i++) {
+    var id = tree.selectedItems[i].id;
+    s[id] = 1;
+    addDescendants(s, id);
+  }
+
+  if ("root" in s) {
+    selectedValues = null;
+  }
+  else {
+    for (var id in s) {
+      if (selectedValues.length==0)
+        selectedValues = id;
+      else
+        selectedValues += ";"+id;
+    }
+  }
+
+  crossFilter.selectedValues = selectedValues;
+  crossFilter.state = "CONFIGURATION_OK";
+}
+
+</script>
+
+</body>
+</html>
+
