@@ -464,7 +464,9 @@
           case 'deploy':
             var frame = new webmem.Frame();
             frame.setCaption("Deploy the galaxy to end users");
-            frame.setLocation("modalpopup");
+            //frame.setLocation("modalpopup");
+            frame.setLocation("modalpopup[550x50%]");
+
             frame.setOnCloseFrameRequestedEvent(
               "staticjava:lv.lumii.datagalaxies.DataGalaxiesApp#onCloseFrameRequestedEvent");
             frame.setContentURI("html:galactictypes/deployToEndUsers.html?frameReference=" + frame.reference);
@@ -1117,9 +1119,9 @@
 
 
           $("body").prepend(
-            "<iframe id='endUserFrame' style='padding:0; border:0; height:100%; width:75%;' onload='onEndUserFrameLoaded();' src='/filedownload/" +
+            "<iframe id='endUserFrame' style='padding:0; border:0; height:100%; width:75%;' onload='onEndUserFrameLoaded();' src='/services/filedownload/" +
             webappos.project_id + "/GalaxyEngineForEndUsers.html?login=" + webappos.login + "&ws_token=" +
-            webappos.ws_token + "' style='padding:0; border:0; width:100%; height:100%;'></iframe>");
+            webappos.ws_token + "&project_id="+webappos.project_id+"&auto_content_type' style='padding:0; border:0; width:100%; height:100%;'></iframe>");
 
         } else {
           $("#chartContainer").addClass("context");

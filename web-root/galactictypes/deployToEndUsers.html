@@ -117,7 +117,7 @@ function GetURLParameter(name) {
 
       var frame = new webmem.Frame();
       frame.setCaption("Edit galaxy run configuration");
-      frame.setLocation("modalpopup");
+      frame.setLocation("modalpopup[600x60%]");
       frame.setOnCloseFrameRequestedEvent(
       "staticjava:lv.lumii.datagalaxies.DataGalaxiesApp#onCloseFrameRequestedEvent");
       frame.setContentURI("html:galactictypes/editRunConfiguration.html?frameReference=" + frame.reference +

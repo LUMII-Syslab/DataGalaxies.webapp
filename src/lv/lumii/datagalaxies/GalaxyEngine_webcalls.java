@@ -14,6 +14,7 @@ import org.codehaus.jettison.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.webappos.auth.UsersManager;
+import org.webappos.project.ProjectCache;
 import org.webappos.server.API;
 import org.webappos.server.ConfigStatic;
 import org.webappos.webcaller.IWebCaller;
@@ -1251,6 +1252,7 @@ public class GalaxyEngine_webcalls {
 	
 	public static String deployGalaxyForEndUsers(String project_id, String id/*arg*/, String login, String appFullName) {
 		IWebMemory webmem = API.dataMemory.getWebMemory(project_id);
+		System.out.println("DEPLOY "+project_id+" arg="+id+" login="+login+", "+webmem);
 		if (webmem==null)
 			return null;
 		
@@ -1652,7 +1654,8 @@ public class GalaxyEngine_webcalls {
 			
 			
 			if (ok) {
-				ok = lv.lumii.tda.util.ZipFolder.zip(f.getParentFile().toPath(), fTemplate);
+				//ok = lv.lumii.tda.util.ZipFolder.zip(f.getParentFile().toPath(), fTemplate);
+				ok = ProjectCache.zip(f.getParentFile().toPath(), fTemplate);
 				if (!ok) {
 					errorMessage = "GalaxyEngine deploy: Could not create (zip) a template for end users.";
 				}
