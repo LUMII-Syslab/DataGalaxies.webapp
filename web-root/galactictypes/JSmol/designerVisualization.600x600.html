@@ -3,8 +3,8 @@
 <html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 <title>jmolApplet0 is ready</title>
 
-<script type="text/javascript" src="/webappos.js"></script>
 <script type="text/javascript" src="/jquery.js"></script>
+<script type="text/javascript" src="/webappos.js"></script>
 <script type="text/javascript" src="js/JSmoljQueryExt.js"></script>
 <script type="text/javascript" src="js/JSmolCore.js"></script>
 <script type="text/javascript" src="js/JSmolApplet.js"></script>
@@ -25,6 +25,10 @@ function load(planet) {
 Jmol.script(jmolApplet0,'load "/services/filedownload/'+webappos.project_id+'/'+planet.star[0].starData[0].fileName+'?login='+webappos.login+'&ws_token='+webappos.ws_token+'&project_id='+webappos.project_id+'"');
 
 }
+
+Jmol._tracker=false;
+Jmol._local=true;
+Jmol._track = function(applet) {return applet}
 
 // Bob Hanson 1/13/2013 2:03:32 PM
 
