@@ -1321,20 +1321,25 @@ public class GalaxyEngine_webcalls {
 				w.println("<head>");
 				w.println("<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\">");
 				//local scripts:
-				w.println("<script type=\"text/javascript\" src=\"/tda.js\" type=\"text/javascript\"></script>");
-				w.println("<script src=\"/galactictypes/end-user-js-css/jquery-2.0.3.min.js\" type=\"text/javascript\"></script>"); 
-				w.println("<script src=\"/galactictypes/end-user-js-css/jquery-ui.min.js\" type=\"text/javascript\"></script>");
+				
 
-				w.println("<link href=\"/galactictypes/end-user-js-css/bootstrap.min.css\" rel=\"stylesheet\"></link>");
-				w.println("<script src=\"/galactictypes/end-user-js-css/bootstrap.min.js\" type=\"text/javascript\"></script>");
-				w.println("<link href=\"/galactictypes/end-user-js-css/bootstrap-editable.css\" rel=\"stylesheet\"/>");
-				w.println("<script src=\"/galactictypes/end-user-js-css/bootstrap-editable.min.js\" type=\"text/javascript\"></script>");
 
-				w.println("<script src=\"/galactictypes/end-user-js-css/lodash.min.js\" type=\"text/javascript\"></script>");
-				w.println("<script src=\"/galactictypes/end-user-js-css/gridstack.js\" type=\"text/javascript\"></script>");
-				w.println("<link href=\"/galactictypes/end-user-js-css/font-awesome.min.css\" rel=\"stylesheet\"/>");
-				w.println("<link href=\"/galactictypes/end-user-js-css/gridstack.css\" rel=\"stylesheet\"/>");
-				w.println("<script src=\"/galactictypes/end-user-js-css/attrchange.js\" type=\"text/javascript\"></script>");
+
+				w.println("<script src=\"end-user-js-css/jquery-2.0.3.min.js\" type=\"text/javascript\"></script>"); 
+				w.println("<script src=\"end-user-js-css/jquery-ui.min.js\" type=\"text/javascript\"></script>");
+
+				w.println("<link href=\"end-user-js-css/bootstrap.min.css\" rel=\"stylesheet\"></link>");
+				w.println("<script src=\"end-user-js-css/bootstrap.min.js\" type=\"text/javascript\"></script>");
+				w.println("<link href=\"end-user-js-css/bootstrap-editable.css\" rel=\"stylesheet\"/>");
+				w.println("<script src=\"end-user-js-css/bootstrap-editable.min.js\" type=\"text/javascript\"></script>");
+
+				w.println("<script src=\"end-user-js-css/lodash.min.js\" type=\"text/javascript\"></script>");
+				w.println("<script src=\"end-user-js-css/gridstack.js\" type=\"text/javascript\"></script>");
+				w.println("<link href=\"end-user-js-css/font-awesome.min.css\" rel=\"stylesheet\"/>");
+				w.println("<link href=\"end-user-js-css/gridstack.css\" rel=\"stylesheet\"/>");
+				w.println("<script src=\"end-user-js-css/attrchange.js\" type=\"text/javascript\"></script>");
+				w.println("<script type=\"text/javascript\" src=\"/dojo/dojo.js\" data-dojo-config=\"async:0\" type=\"text/javascript\"></script>");
+				w.println("<script type=\"text/javascript\" src=\"/webappos.js\" type=\"text/javascript\"></script>");
 				
 						
 				w.println("</head>");
@@ -1576,8 +1581,10 @@ public class GalaxyEngine_webcalls {
 				w.println("  $(\"iframe\").remove();");
 				w.println("  var s = \"<html>\\n\"+document.head.outerHTML+document.body.outerHTML+\"\\n</html>\";");
 				w.println("  setTimeout( function() {");
-				w.println("    tda.fileUploadFromString(\"GalaxyEngineForEndUsers.html\", s); //console.log(s);");
-				w.println("    tda.saveAndReload();");
+				w.println("    webappos.webcall(\"webappos.uploadFileToCurrentProject\", {");
+				w.println("      fileName: \"GalaxyEngineForEndUsers.html\",");
+				w.println("      content: s");
+				w.println("    }).then(()=>window.top.location.reload());");
 				w.println("  }, 100); // wait for jQuery to finish refreshing the document...");
 				w.println("}");
 

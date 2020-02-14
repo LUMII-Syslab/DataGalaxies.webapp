@@ -445,7 +445,7 @@ public class DataGalaxiesApp
 				return false;
 			}
 			
-			
+			System.out.println("configureNothing");
 			lv.lumii.datagalaxies.mm.GalaxyComponent component = null;
 			
 			lv.lumii.datagalaxies.mm.LaunchTransformationCommand cmd = (lv.lumii.datagalaxies.mm.LaunchTransformationCommand)geFactory.findOrCreateRAAPIReferenceWrapper(r, false);
