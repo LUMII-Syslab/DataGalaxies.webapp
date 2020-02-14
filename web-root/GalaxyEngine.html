@@ -28,7 +28,7 @@
 <head>
   <meta http-equiv="content-type" content="text/html; charset=UTF-8">
   <title>DataGalaxies</title>
-  <script src="dojo/dojo.js" data-dojo-config="async:0"></script>
+  <script src="/dojo/dojo.js" data-dojo-config="async:0"></script>
 
   <script type="text/javascript" src="/webappos.js"></script>
 
@@ -63,6 +63,7 @@
 
   <!-- for GraphViz: -->
   <script type="text/javascript" src="graphvis/underscore-min.js"></script>
+  <link rel="stylesheet" href="/dijit/themes/claro/claro.css" media="screen">
 
 </head>
 
@@ -1097,7 +1098,7 @@
 
           // adding div to the top of the scaled chart container (right top corner)
           $("body").append(
-            "<div id=\"afterChartContainer\" style=\"padding:10px; position:absolute; left:75%; top:0%; width:25%; height:75%; background-image: url(/images/DG_END_USER_BACKGROUND.jpg); background-size: 100% auto;\">" +
+            "<div id=\"afterChartContainer\" style=\"padding:10px; position:absolute; left:75%; top:0%; width:25%; height:75%; background-image: url(images/DG_END_USER_BACKGROUND.jpg); background-size: 100% auto;\">" +
             "<p align='center' style='font-size:18.0pt;font-family:\"Segoe UI Light\",\"sans-serif\";color:#D5D5F5'>" +
             webappos.project_id + "</p>" +
             "&nbsp;<input id='showAdvanced' name='showAdvanced' data-dojo-id=\"showAdvancedDojo\" data-dojo-type=\"dijit/form/CheckBox\" onChange=\"showAdvancedClick();\"/><label for='showAdvanced' style='color:#E5E5E5'> Show advanced configuration (if any)</label>" +
@@ -1119,8 +1120,8 @@
 
 
           $("body").prepend(
-            "<iframe id='endUserFrame' style='padding:0; border:0; height:100%; width:75%;' onload='onEndUserFrameLoaded();' src='/services/filedownload/" +
-            webappos.project_id + "/GalaxyEngineForEndUsers.html?login=" + webappos.login + "&ws_token=" +
+            "<iframe id='endUserFrame' style='padding:0; border:0; height:100%; width:75%;' onload='onEndUserFrameLoaded();' src='"+
+            "*GalaxyEngineForEndUsers.html?login=" + webappos.login + "&ws_token=" +
             webappos.ws_token + "&project_id="+webappos.project_id+"&auto_content_type' style='padding:0; border:0; width:100%; height:100%;'></iframe>");
 
         } else {

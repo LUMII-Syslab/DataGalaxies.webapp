@@ -1,0 +1,2 @@
+This file is required to create an in-memory repository for storing the
+hierarchy of galactic types.
