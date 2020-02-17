@@ -892,7 +892,14 @@
 
       displayStyleInEndUserFrame("advancedConfigurationDiv", "none");
       displayStyleInEndUserFrame("visualizationDiv", "none");
+
+      dojoDisplayStyle(runButtonDojo, "block");
       dojoDisplayStyle(rerunButtonDojo, "none");
+
+
+      displayStyleInEndUserFrame("visualizationConfigurationDiv", "none");
+      displayStyleInEndUserFrame("configurationDiv", "block");
+
       startEndUserConfiguration();
     }
 
@@ -939,6 +946,8 @@
         displayStyleInEndUserFrame("configurationDiv", "none");
         displayStyleInEndUserFrame("advancedConfigurationDiv", "none");
       }
+
+      displayStyleInEndUserFrame("visualizationConfigurationDiv", "block");
       displayStyleInEndUserFrame("visualizationDiv", "block");
 
       var ids = [];
