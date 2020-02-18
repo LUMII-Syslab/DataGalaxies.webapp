@@ -22,11 +22,6 @@
 <body id="body">
   Choose a final star data type!
   <script>
-    function GetURLParameter(name) {
-      return decodeURIComponent((new RegExp('[?|&]' + name + '=' + '([^&;]+?)(&|#|;|$)').exec(location.search) || [,
-        ""])[1].replace(/\+/g, '%20')) || null
-    } // [source: http://stackoverflow.com/questions/11582512/how-to-get-url-parameters-with-javascript]
-
     if (typeof String.prototype.endsWith != 'function') {
       String.prototype.endsWith = function (str) {
         return this.substring(this.length - str.length, this.length) === str;

@@ -126,7 +126,7 @@
 
     //  if ("designer"==GetURLParameter('mode')) {
     let frame = webmem[parseInt(GetURLParameter('frameReference'))];
-    if (("center" != frame.location) && ("CENTER" != frame.location)) {
+    if (("center" != frame.location) && ("CENTER" != frame.location) && (frame.location.indexOf("framediv:")!=0)) {
       $('#footer').html(
         "<input type='button' value='Open in new tab' onClick='onTab();'/>" +
         "<input type='button' value='Close' onClick='onClose();'/>");
@@ -189,6 +189,7 @@ console.log("FINALIZE",frameCopy);
 
   function bodyResized() {
     configFrameDiv.style.height = document.body.parentElement.clientHeight - footer.offsetHeight + "px";
+    configFrameDiv.style.width = document.body.parentElement.clientWidth + "px";
   };
 </script>
 

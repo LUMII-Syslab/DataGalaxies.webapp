@@ -1,7 +1,6 @@
 <script src="/webappos.js"></script>
 <script src="/jquery.min.js"></script>
 
-Star name: <input type="edit" id="starName" value="MOL file"/>
 <p>
 Choose .mol file:
 <input id="finput" type="file" accept=".mol" multiple/>
@@ -15,18 +14,11 @@ function load(star)
 
   star = webmem[star.reference];
 
-  if (star.name)
-    $("#starName").value = star.name;
-
   webappos.js_util.initialize_file_input(finput, star.starData[0].fileName);
 }
 
 function store(star)
 {
-  star.name = document.getElementById("starName").value;
-  if (!star.name)
-    star.state = "CONFIGURATION_ERROR";
-
   star.starData[0].fileName = webappos.js_util.upload_file_input(finput, webappos.project_id, true);
 }
 
