@@ -395,7 +395,7 @@ public class GalaxyEngine_webcalls {
 			return "";
 	}
 
-	private static long ensureFrame(RAAPI raapi, long rCmd) {
+	private static long ensureDGFrame(RAAPI raapi, long rCmd) {
 		lv.lumii.datagalaxies.mm.GalaxyEngineMetamodelFactory factory1 = new lv.lumii.datagalaxies.mm.GalaxyEngineMetamodelFactory();
 		try {
 			factory1.setRAAPI(raapi, "", false);
@@ -442,8 +442,10 @@ public class GalaxyEngine_webcalls {
 		
 		String contentURI = f.getContentURI();
 		if (contentURI==null || contentURI.isEmpty()) {
-			f.setCaption("DataGalaxy");
-			f.setIsClosable(true);
+			if (f.getCaption()==null) { 
+				f.setCaption("DataGalaxy");
+				f.setIsClosable(false);
+			}
 			f.setContentURI("html:GalaxyEngine.html?frameReference="+f.getRAAPIReference());
 			raapi.createLink(f.getRAAPIReference(), dg.getRAAPIReference(), factory1.FRAME_DATAGALAXY);
 			f.setLocation("center");
@@ -763,7 +765,7 @@ public class GalaxyEngine_webcalls {
 		if (retVal==null)
 			return false;
 		
-		long rFrame = ensureFrame(raapi, rCmd);
+		long rFrame = ensureDGFrame(raapi, rCmd);
 		if (rFrame == 0)
 			return false;
 		
@@ -779,7 +781,7 @@ public class GalaxyEngine_webcalls {
 					
 		seed.actionName = "continueEditGalaxyCommand";
 		
-		System.out.println(retVal);
+		//System.out.println(retVal);
 		seed.callingConventions = WebCaller.CallingConventions.JSONCALL;
 		seed.jsonArgument = retVal.toString();
 		
@@ -813,7 +815,7 @@ public class GalaxyEngine_webcalls {
 						
 			JSONObject retVal = serializeGalaxy(raapi);
 			
-			long rFrame = ensureFrame(raapi, r);
+			long rFrame = ensureDGFrame(raapi, r);
 			if (rFrame == 0) {
 				cmd.delete();
 				return false;
@@ -1172,7 +1174,6 @@ public class GalaxyEngine_webcalls {
 				return null;
 			}
 			
-
 			JSONArray arr = null;
 			try {
 				arr = new JSONArray(json);
@@ -1200,6 +1201,7 @@ public class GalaxyEngine_webcalls {
 				GalaxyHelper.refreshGalaxy(geFactory, null);
 			
 			} catch (JSONException e) {
+				e.printStackTrace();
 				return null;
 			}
 			
@@ -1325,29 +1327,29 @@ public class GalaxyEngine_webcalls {
 
 
 
-				w.println("<script src=\"end-user-js-css/jquery-2.0.3.min.js\" type=\"text/javascript\"></script>"); 
+				w.println("<script src=\"end-user-js-css/jquery.min.js\" type=\"text/javascript\"></script>"); 
 				w.println("<script src=\"end-user-js-css/jquery-ui.min.js\" type=\"text/javascript\"></script>");
+				w.println("<link href=\"end-user-js-css/jquery-ui.min.css\" rel=\"stylesheet\"></link>");
 
 				w.println("<link href=\"end-user-js-css/bootstrap.min.css\" rel=\"stylesheet\"></link>");
 				w.println("<script src=\"end-user-js-css/bootstrap.min.js\" type=\"text/javascript\"></script>");
-				w.println("<link href=\"end-user-js-css/bootstrap-editable.css\" rel=\"stylesheet\"/>");
-				w.println("<script src=\"end-user-js-css/bootstrap-editable.min.js\" type=\"text/javascript\"></script>");
-
-				w.println("<script src=\"end-user-js-css/lodash.min.js\" type=\"text/javascript\"></script>");
+				
 				w.println("<script src=\"end-user-js-css/gridstack.js\" type=\"text/javascript\"></script>");
-				w.println("<link href=\"end-user-js-css/font-awesome.min.css\" rel=\"stylesheet\"/>");
 				w.println("<link href=\"end-user-js-css/gridstack.css\" rel=\"stylesheet\"/>");
-				w.println("<script src=\"end-user-js-css/attrchange.js\" type=\"text/javascript\"></script>");
+				
 				w.println("<script type=\"text/javascript\" src=\"/dojo/dojo.js\" data-dojo-config=\"async:0\" type=\"text/javascript\"></script>");
 				w.println("<script type=\"text/javascript\" src=\"/webappos.js\" type=\"text/javascript\"></script>");
-				
+				w.println("<style>");
+				w.println(".geditable:hover { background-color: rgba(217, 245, 255,0.5); }");
+				w.println(".geditable:focus { background-color: rgba(217, 245, 255,0.5); }");
+				w.println("</style>");
 						
 				w.println("</head>");
 				w.println("<body>");
-				w.println("<h1 class=\"editable\" style=\"font-size:18.0pt;padding-left:10;font-family:'Segoe UI Light','sans-serif'\">"+rc.getName()+"</h1>");
+				w.println("<h1 class=\"geditable\" style=\"font-size:18.0pt;padding-left:10;font-family:'Segoe UI Light','sans-serif'\">"+rc.getName()+"</h1>");
 				String desc = rc.getDescription();
 				if ((desc!=null) && (!desc.isEmpty()))
-				  w.println("<i><p class=\"editable\" style=\"padding-left:10;\" id=\"description\">"+desc+"</p></i>");
+				  w.println("<i><p class=\"geditable\" style=\"padding-left:10;\" id=\"description\">"+desc+"</p></i>");
 				
 				w.println("<div id=\"errorDiv\" style=\"padding-left:10;font-family: 'Consolas', 'monospace'; color:#c5000b\"></div>");
 				
@@ -1374,7 +1376,7 @@ public class GalaxyEngine_webcalls {
 					
 					w.println(displayStyleToGridStackDiv(cfgStyle, classes));
 					w.println("<div class=\"grid-stack-item-content\" style=\"padding-top:20px;\">"); // background-color:red
-					w.println("<div style=\"margin-top:-20px; height:20px; color:white; background-color:blue;\"><span class=\"editable\">"+c.getName()+"</span>");
+					w.println("<div style=\"margin-top:-20px; height:20px; color:white; background-color:blue;\"><span class=\"geditable\">"+c.getName()+"</span>");
 					w.println("</div>");
 					w.println("<div id=\"configurationFor"+c.getId()+"\" class=\""+classes+"\" name=\""+c.getName()+"\" style=\"min-height:100%;width:100%;background-color:#e3ebf3\">");
 					
@@ -1411,7 +1413,7 @@ public class GalaxyEngine_webcalls {
 					
 					w.println(displayStyleToGridStackDiv(cfgStyle, classes));
 					w.println("<div class=\"grid-stack-item-content\" style=\"padding-top:20px;\">"); // background-color:red
-					w.println("<div style=\"margin-top:-20px; height:20px; color:white; background-color:blue;\"><span class=\"editable\">"+c.getName()+"</span>");
+					w.println("<div style=\"margin-top:-20px; height:20px; color:white; background-color:blue;\"><span class=\"geditable\">"+c.getName()+"</span>");
 					w.println("</div>");
 					w.println("<div id=\"configurationFor"+c.getId()+"\" class=\""+classes+"\" name=\""+c.getName()+"\" style=\"min-height:100%;width:100%;background-color:#e3ebf3\">");
 					
@@ -1444,7 +1446,7 @@ public class GalaxyEngine_webcalls {
 						// adding visualization div
 						w.println(displayStyleToGridStackDiv(vizStyle, "visualizationDiv"));
 						w.println("<div class=\"grid-stack-item-content\" style=\"padding-top:20px;\">"); //background-color:red
-						w.println("<div style=\"margin-top:-20px; height:20px; color:white; background-color:blue;\"><span class=\"editable\">"+c.getName()+"</span>");
+						w.println("<div style=\"margin-top:-20px; height:20px; color:white; background-color:blue;\"><span class=\"geditable\">"+c.getName()+"</span>");
 						w.println("</div>");
 						w.println("<div id=\"visualizationFor"+c.getId()+"\" class=\"visualizationDiv\" name=\""+c.getName()+"\" style=\"min-height:100%;width:100%;background-color:#e3ebf3\">");
 						
@@ -1460,7 +1462,7 @@ public class GalaxyEngine_webcalls {
 				w.println("</div>"); // for gridstack3
 				
 				w.println("<script>");
-				w.println("function setGridStackSize() {");
+/*				w.println("function setGridStackSize() {");
 				w.println("     var yT=null, yB=null;");
 				w.println("     $( \"#gridstack1\" ).children().each( function( index, element ){");
 				w.println("       if (element.style.display==\"none\")");
@@ -1505,7 +1507,7 @@ public class GalaxyEngine_webcalls {
 				w.println("         $('#gridstack3').css(\"min-height\", (yB-yT)*80+(yB-yT-1)*10);");
 				w.println("         gridstack3.style[\"min-height\"]=(yB-yT)*80+(yB-yT-1)*10;");
 				w.println("     }");				
-				w.println("}");
+				w.println("}");*/
 
 				w.println("$(document).ready(function() {");
 				w.println("  var options = {");
@@ -1522,7 +1524,7 @@ public class GalaxyEngine_webcalls {
 				w.println("  $('#gridstack2').gridstack(options);");
 				w.println("  $('#gridstack3').gridstack(options);");
 				
-				w.println("  setTimeout(setGridStackSize, 500);");
+//				w.println("  setTimeout(setGridStackSize, 500);");
 				w.println("  var fStart = function (event, ui) {");
 				w.println("	    var grid = this;");
 				w.println("	    var element = event.target;");
@@ -1535,7 +1537,7 @@ public class GalaxyEngine_webcalls {
 				w.println("     var element = event.target;");
 				w.println("     $(\".grid-stack-item-content\").css(\"pointer-events\", \"auto\");");
 				w.println("     setTimeout(function() {");
-				w.println("       setGridStackSize();");
+//				w.println("       setGridStackSize();");
 				w.println("       $(\".grid-stack-item\").css(\"z-index\", \"\");");
 				w.println("       element.style[\"z-index\"]=10000;");
 				w.println("     },100);");
@@ -1549,17 +1551,11 @@ public class GalaxyEngine_webcalls {
 				w.println("});");
 				w.println("</script>");
 
+				
 				w.println("<script id=\"scripts\" class=\"not-forever\">");
 				w.println("$(document).ready(function() {");
-				w.println("  $.fn.editable.defaults.mode = 'inline';");
-				w.println("  $('.editable').editable({");
-				w.println("      type: 'text',");
-				w.println("      pk: 1,");
-				w.println("      title: 'Enter new text',");
-				w.println("      success: function(response, newValue) {");
-				w.println("        setTimeout(function() {$(\".editable\").removeClass(\"editable-unsaved\");}, 0);");
-				w.println("      }");
-				w.println("  });");
+				w.println("  $('.geditable').attr(\"contenteditable\", \"true\");");
+				w.println("  $('.geditable').attr(\"onclick\", \"$(this).focus();\");");
 				w.println("});");
 
 				w.println("function saveFile()");
@@ -1599,7 +1595,8 @@ public class GalaxyEngine_webcalls {
 				w.println("  $(\".grid-stack-item\").attr(\"data-gs-no-move\", true);");
 				w.println("  $(\".not-forever\").remove();");
 				w.println("  $(\".grid-stack-placeholder\").remove();");
-				w.println("  $(\".editable\").removeClass();");
+				w.println("  $(\".geditable\").removeAttr(\"contenteditable\");");
+				w.println("  $(\".geditable\").removeClass();");
 				w.println("  saveFile();");
 				w.println("}");
 				w.println("</script>");

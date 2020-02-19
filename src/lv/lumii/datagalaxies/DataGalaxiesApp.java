@@ -433,18 +433,12 @@ public class DataGalaxiesApp
 		}
 	}
 
-	public static boolean configureNothing(RAAPI raapi, long r)
+	public static boolean configureNothing(IWebMemory raapi, long r)
 	{		
-		lv.lumii.datagalaxies.mm.GalaxyEngineMetamodelFactory geFactory = new lv.lumii.datagalaxies.mm.GalaxyEngineMetamodelFactory();
+		lv.lumii.datagalaxies.mm.GalaxyEngineMetamodelFactory geFactory = raapi.elevate(lv.lumii.datagalaxies.mm.GalaxyEngineMetamodelFactory.class);
+		lv.lumii.datagalaxies.eemm.EnvironmentEngineMetamodelFactory eeFactory = raapi.elevate(lv.lumii.datagalaxies.eemm.EnvironmentEngineMetamodelFactory.class);
 		
-		try {
-		try {
-			try {
-				geFactory.setRAAPI(raapi, "", true);
-			} catch (Throwable e) {
-				return false;
-			}
-			
+		try {			
 			System.out.println("configureNothing");
 			lv.lumii.datagalaxies.mm.GalaxyComponent component = null;
 			
@@ -465,8 +459,12 @@ public class DataGalaxiesApp
 				component = ((lv.lumii.datagalaxies.mm.ConfigureCrossFilter) cmd).getCrossFilter().get(0);
 			}
 			
-			if (component!=null)
+			if (component!=null) {
+				lv.lumii.datagalaxies.eemm.ShowInformationBarCommand shcmd = eeFactory.createShowInformationBarCommand();
+				shcmd.setMessage("No configuration needed for the component "+component.getName());
+				shcmd.submit();
 				component.setState("CONFIGURATION_OK");
+			}
 			
 			lv.lumii.datagalaxies.mm.RefreshGalaxyCommand rcmd = geFactory.createRefreshGalaxyCommand();
 			rcmd.setModifiedComponent(component);
@@ -474,12 +472,7 @@ public class DataGalaxiesApp
 				
 			rcmd.submit();
 			
-			return true;
-		
-		}
-		finally {
-			geFactory.unsetRAAPI();
-		}	
+			return true;		
 		}
 		catch(Throwable t) {
 			return false;

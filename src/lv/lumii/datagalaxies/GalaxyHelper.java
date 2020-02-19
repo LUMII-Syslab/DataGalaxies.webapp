@@ -76,6 +76,7 @@ public class GalaxyHelper {
 	{
 		closeComponentFrame(componentObj);
 		
+		System.out.println("!Deleting component "+componentObj.getId()+" (its state is "+componentObj.getState()+")...");
 		if (DEBUG) System.out.println("Deleting component "+componentObj.getId()+" (its state is "+componentObj.getState()+")...");
 		if (componentObj instanceof lv.lumii.datagalaxies.mm.StellarWind) {			
 			if ("NEW".equals( componentObj.getState() )) {

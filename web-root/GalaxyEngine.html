@@ -447,7 +447,7 @@
             break;
 
           case 'delete':
-            if (selectedNodes && (nodes.length > 0)) {
+            if (nodes.length > 0) {
               var components = [];
               for (var i = 0; i < nodes.length; i++) {
                 components[i] = nodes[i];
@@ -1515,7 +1515,11 @@
               } else {
                 // not a cross filter...
                 var newRuns = webappos.webcall_and_wait("getRunsForCleanup", JSON.stringify([">" + c.id]));
-                runGalaxy(newRuns);
+                runGalaxy(newRuns, function() {
+                  let cmd = new webmem.RefreshGalaxyCommand();
+                  cmd.setDataGalaxy(webmem.DataGalaxy.getFirstObject());
+                  webmem.submit(cmd);
+                });
               }
             }
           }
