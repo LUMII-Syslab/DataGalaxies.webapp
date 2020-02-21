@@ -5,7 +5,14 @@ jsoncall\ getPossibleStarDataTypes=staticjava:lv.lumii.datagalaxies.GalaxyEngine
 jsoncall\ getPossibleStellarWinds=staticjava:lv.lumii.datagalaxies.GalaxyEngine_webcalls#getPossibleStellarWinds
 jsoncall\ getPossiblePlanets=staticjava:lv.lumii.datagalaxies.GalaxyEngine_webcalls#getPossiblePlanets
 jsoncall\ getPossibleCrossFilters=staticjava:lv.lumii.datagalaxies.GalaxyEngine_webcalls#getPossibleCrossFilters
+
 jsoncall\ putGalacticTypeIntoMetamodel=staticjava:lv.lumii.datagalaxies.GalaxyEngine_webcalls#putGalacticTypeIntoMetamodel
+# Warning: use only asynchronous webappos.webcall for putGalacticTypeIntoMetamodel.
+#          The reason: webAppOS needs a round-trip to synchronize
+#          the new galactic typc in web memory with the browser. The new type will be
+#          created at the client-side webmem during some future JavaScript processing
+#          (i.e., later in the JS queue).
+#          Thus, the galactic type will not be available right after webcall_and_wait returns.
 
 # Editing a galaxy...
 jsoncall\ storeGalaxyCoordinates=staticjava:lv.lumii.datagalaxies.GalaxyEngine_webcalls#storeGalaxyCoordinates
@@ -38,3 +45,5 @@ webmemcall\ EditGalaxyCommand=staticjava:lv.lumii.datagalaxies.GalaxyEngine_webc
 webmemcall\ RefreshGalaxyCommand=staticjava:lv.lumii.datagalaxies.GalaxyEngine_webcalls#prepareAndContinueRefreshGalaxyCommand
 jsoncall\ continueEditGalaxyCommand=clientjs:executeEditGalaxyCommand
 jsoncall\ continueRefreshGalaxyCommand=clientjs:executeRefreshGalaxyCommand
+
+webmemcall\ SmartRefreshGalaxy=staticjava:lv.lumii.datagalaxies.GalaxyEngine_webcalls#smartRefreshGalaxy

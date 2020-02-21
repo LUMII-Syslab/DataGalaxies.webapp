@@ -1,11 +1,10 @@
 <html>
 <head>
-<script src="/tda.js"></script>
-<script src="/jquery-1.11.1.min.js"></script>
+<script src="/jquery.js"></script>
+<script src="/webappos.js"></script>
 </head>
 <body>
 Converting JSON array to tree...
-<div id="aaa"></div>
 
 <script id="getParentTag">
 </script>
@@ -110,8 +109,9 @@ function emitAsync(_stWind, _fAfter)
 
 //  alert("emitting from "+stellarWind.source[0].starData[0].fileName +" to "+
 //                         stellarWind.target[0].starData[0].fileName);
+  
 
-  var sFile = tda.fileContentAsUTF8String(stellarWind.source[0].starData[0].fileName);
+  var sFile = webappos.webcall_and_wait("webappos.getFileContentFromCurrentProjectAsUTF8String", stellarWind.source[0].starData[0].fileName).content;
   try {
     src = JSON.parse(sFile);
   }
@@ -124,10 +124,10 @@ function emitAsync(_stWind, _fAfter)
     return;
   }
   try {
-    isParentOf = eval(stellarWind.isParentOf+"; isParentOf;");
+    isParentOf = eval("("+stellarWind.isParentOf+")");
   }
   catch(t) {
-    alert("could not parse function isParentOf");
+    alert("could not parse function isParentOf;"+t);
     stellarWind.state = "RUN_ERROR";
     finalized = true;
     fAfter();
@@ -147,7 +147,11 @@ function emitAsync(_stWind, _fAfter)
     for (var i in src)
       delete src[i].parent;
 
-    var result = tda.fileUploadFromString(stellarWind.target[0].starData[0].fileName, JSON.stringify(resultJson, null, 2));
+    var result = webappos.webcall_and_wait("webappos.uploadFileToCurrentProject", {
+      fileName: stellarWind.target[0].starData[0].fileName,
+      content: JSON.stringify(resultJson, null, 2)
+    }).result;
+
     console.log("file "+stellarWind.target[0].starData[0].fileName+" res="+result);
 
     if (result) {
@@ -175,7 +179,7 @@ function finalize()
   if (stellarWind && (stellarWind.state=="RUNNING")) {
     stellarWind.state = "RUN_ERROR";
     stellarWind.stateMessage = "Run cancelled.";
-    tda.jsonsubmit("storeObjects", [stellarWind]);
+    webappos.webcall_and_wait("storeObjects", [stellarWind]);
   }
 
   if (fAfter)

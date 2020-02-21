@@ -129,13 +129,18 @@ $(document).ready(function() {
   $("#configFrame").attr("src", encodeURI(GetURLParameter('fileName')));
 
 
-  $("#configFrame").load(
+  $("#configFrame").on("load",
     function() {
+      let code = 
+          "if (load)"+
+          "  load("+JSON.stringify(galaxyComponent)+");"+
+          "if ((typeof cancel == 'undefined') && (typeof cancelAsync == 'undefined')) window.parent.closeButtonToFooter();";
+
       if (configFrame.contentWindow) {
-        configFrame.contentWindow.eval("if (load) load("+JSON.stringify(galaxyComponent)+"); if ((typeof cancel == 'undefined') && (typeof cancelAsync == 'undefined')) window.parent.closeButtonToFooter();");
+        configFrame.contentWindow.eval(code);
       }
       else { // IE
-        configFrame.frameElement.contentWindow.eval("if (load) load("+JSON.stringify(galaxyComponent)+"); if ((typeof cancel == 'undefined') && (typeof cancelAsync == 'undefined')) window.parent.closeButtonToFooter();");
+        configFrame.frameElement.contentWindow.eval(code);
       }
     }
   );

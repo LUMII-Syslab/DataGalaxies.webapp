@@ -187,21 +187,26 @@ public class Filterer {
 		lv.lumii.datagalaxies.mm.GalaxyEngineMetamodelFactory geFactory = new lv.lumii.datagalaxies.mm.GalaxyEngineMetamodelFactory();
 		
 		try {
-			try {
-				eeFactory.setRAAPI(raapi, "", true);
-				geFactory.setRAAPI(raapi, "", true);
-			} catch (Throwable e) {
-				System.err.println("Error while preparing filterer stellar wind: "+e.getMessage());
-				return false;
-			}
-			
-			
-			lv.lumii.datagalaxies.mm.EmitStellarWind cmd = (lv.lumii.datagalaxies.mm.EmitStellarWind)geFactory.findOrCreateRAAPIReferenceWrapper(r, false);
+			eeFactory.setRAAPI(raapi, "", true);
+			geFactory.setRAAPI(raapi, "", true);
+		} catch (Throwable e) {
+			System.err.println("Error while preparing filterer stellar wind: "+e.getMessage());
+			return false;
+		}
 		
-			lv.lumii.datagalaxies.mm.StellarWind stW = cmd.getStellarWind().get(0);
-			lv.lumii.datagalaxies.mm.StarData src = stW.getSource().get(0).getStarData().get(0);
-			lv.lumii.datagalaxies.mm.Star tgtStar = stW.getTarget().get(0);
-			lv.lumii.datagalaxies.mm.StarData tgt = stW.getTarget().get(0).getStarData().get(0);
+		lv.lumii.datagalaxies.mm.EmitStellarWind cmd=null;
+		lv.lumii.datagalaxies.mm.StellarWind stW=null;
+		lv.lumii.datagalaxies.mm.StarData src=null;
+		lv.lumii.datagalaxies.mm.Star tgtStar=null;
+		lv.lumii.datagalaxies.mm.StarData tgt=null;
+		
+		try {						
+			cmd = (lv.lumii.datagalaxies.mm.EmitStellarWind)geFactory.findOrCreateRAAPIReferenceWrapper(r, false);
+		
+			stW = cmd.getStellarWind().get(0);
+			src = stW.getSource().get(0).getStarData().get(0);
+			tgtStar = stW.getTarget().get(0);
+			tgt = stW.getTarget().get(0).getStarData().get(0);
  			
 			long rFile = src.getRAAPI().findClass("File");
 			long rFileNameAttr = src.getRAAPI().findAttribute(rFile, "fileName");
@@ -347,7 +352,15 @@ public class Filterer {
 		
 		}
 		catch(Throwable t) {
-			System.err.println("Error while preparing filterer - "+t.getMessage());
+			System.err.println("Error in filterer - "+t.getMessage());
+			if (stW!=null) {
+				stW.setStateMessage("Error in filterer - "+t.toString());
+				stW.setState("RUN_ERROR");
+	 			lv.lumii.datagalaxies.mm.RefreshGalaxyCommand rc = geFactory.createRefreshGalaxyCommand();
+	 			rc.setDataGalaxy(lv.lumii.datagalaxies.mm.DataGalaxy.firstObject(geFactory));
+	 			rc.setModifiedComponent(stW);
+	 			rc.submit();
+			}
 			return false;
 		}
 		finally {

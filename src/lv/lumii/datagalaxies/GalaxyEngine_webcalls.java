@@ -18,6 +18,7 @@ import org.webappos.project.ProjectCache;
 import org.webappos.server.API;
 import org.webappos.server.ConfigStatic;
 import org.webappos.webcaller.IWebCaller;
+import org.webappos.webcaller.IWebCaller.WebCallSeed;
 import org.webappos.webcaller.WebCaller;
 import org.webappos.webmem.IWebMemory;
 import org.webappos.webmem.WebMemoryContext;
@@ -135,7 +136,7 @@ public class GalaxyEngine_webcalls {
 		try {
 			factory.setRAAPI(raapi, "", false);
 		} catch (ElementReferenceException e) {
-			return null;
+			return "{\"error\":\"Web memory metamodel error.\"}";
 		}
 		
 		try {
@@ -811,7 +812,7 @@ public class GalaxyEngine_webcalls {
 				return false;
 			}
 				
-			lv.lumii.datagalaxies.mm.RefreshGalaxyCommand cmd = (lv.lumii.datagalaxies.mm.RefreshGalaxyCommand)factory.findOrCreateRAAPIReferenceWrapper(r, false);
+			lv.lumii.datagalaxies.mm.RefreshGalaxyCommand cmd = (lv.lumii.datagalaxies.mm.RefreshGalaxyCommand)factory.findOrCreateRAAPIReferenceWrapper(r, true);
 						
 			JSONObject retVal = serializeGalaxy(raapi);
 			
@@ -2079,11 +2080,16 @@ public class GalaxyEngine_webcalls {
 	 *        "action" - values can be "InitializeStar", "FinalizeStar", "EmitStellarWind", or "VisualizePlanet"
 	 *        "id" - the id of the component, for which the given action has to be performed
 	 *        "frameLocation" - for VisualizePlanet 
-	 * @return "{}" on success, or null on error
+	 * @return "{}" on success, or {error:msg} on error
 	 */
-	public static String runGalaxyComponentAsync(RAAPI raapi, String json)
-	{
-		
+	//public static String runGalaxyComponentAsync(RAAPI raapi, String json)
+	
+	public static String runGalaxyComponentAsync(String project_id, String json, String login, String appFullName)	
+	{		
+		IWebMemory raapi = API.dataMemory.getWebMemory(project_id);
+		if (raapi==null)
+			return "{\"error\":\"Web memory is not present.\"}";
+
 		lv.lumii.datagalaxies.eemm.EnvironmentEngineMetamodelFactory eeFactory = new lv.lumii.datagalaxies.eemm.EnvironmentEngineMetamodelFactory();
 		lv.lumii.datagalaxies.mm.GalaxyEngineMetamodelFactory geFactory = new lv.lumii.datagalaxies.mm.GalaxyEngineMetamodelFactory();
 		
@@ -2092,7 +2098,7 @@ public class GalaxyEngine_webcalls {
 				eeFactory.setRAAPI(raapi, "", true);
 				geFactory.setRAAPI(raapi, "", true);
 			} catch (Throwable e) {
-				return null;
+				return "{\"error\":\"Web memory metamodel error.\"}";
 			}
 			
 
@@ -2105,7 +2111,7 @@ public class GalaxyEngine_webcalls {
 				id = jsonObj.getString("id");
 				action = jsonObj.getString("action");
 			} catch (JSONException e) {
-				return null;
+				return "{\"error\":\"Wrong json passed to runGalaxyComponentAsync.\"}";
 			}
 			
 			try {
@@ -2114,7 +2120,7 @@ public class GalaxyEngine_webcalls {
 			}
 			
 			if (id==null)
-				return null;
+				return "{\"error\":\"Wrong json passed to runGalaxyComponentAsync.\"}";
 			
 			// check if that galaxy component exists...
 			lv.lumii.datagalaxies.mm.GalaxyComponent c = null;
@@ -2125,14 +2131,13 @@ public class GalaxyEngine_webcalls {
 				}
 			}
 			if (c == null) { // not found
-				return null;
-
+				return "{\"error\":\"Component not found.\"}";
 			}
 				
 			if (c instanceof lv.lumii.datagalaxies.mm.CrossFilter)		
 				return "{}";
 			
-			if ("RUN_OK".equals(c.getState()) && !"FinalizeStar".equals(action)) {
+			if ("RUN_OK".equals(c.getState()) /*&& !"FinalizeStar".equals(action)*/) {
 				GalaxyHelper.refreshGalaxy(geFactory, c);
 				return "{}"; // already run
 			}
@@ -2140,12 +2145,17 @@ public class GalaxyEngine_webcalls {
 			if ("CONFIGURATION_UNKNOWN".equals(c.getState())) {
 				c.setStateMessage("The star has not been initialized/finalized since the star data type is not specified (yet).");
 				GalaxyHelper.refreshGalaxy(geFactory, c);
-				return "{}"; // assume that this is OK
+				return "{}"; // assume that this is OK; we set no error to the state
 			}
 			
 			if (!"CONFIGURATION_OK".equals(c.getState()) && !"RUNNING".equals(c.getState())) {
+				System.out.println(c.getState()+" "+c.getId());
+					
 				GalaxyHelper.refreshGalaxy(geFactory, c);
-				return null; // run or configuration error
+				if ("CONFIGURATION_ERROR".equals(c.getState()))
+					return "{\"error\":\"Configuration error.\"}";
+				else
+					return "{\"error\":\"Run or configuration error.\"}";
 			}
 			
 			
@@ -2167,7 +2177,7 @@ public class GalaxyEngine_webcalls {
 						if (!"CONFIGURATION_ERROR".equals(c.getState()) && !"CONFIGURATION_UNKNOWN".equals(c.getState()))
 							c.setState("CONFIGURATION_OK");							
 						GalaxyHelper.refreshGalaxy(geFactory, c);
-						return null;
+						return "{}";
 					}
 					
 					
@@ -2177,7 +2187,7 @@ public class GalaxyEngine_webcalls {
 						c.setState("RUN_ERROR");
 						c.setStateMessage("Could not find the type configuration for the star data type "+GalaxyHelper.getGalacticTypeName(c));
 						GalaxyHelper.refreshGalaxy(geFactory, c);
-						return null;
+						return "{\"error\":\"Could not find the type configuration for the star data type "+GalaxyHelper.getGalacticTypeName(c)+"\"}";
 					}
 					
 					
@@ -2205,7 +2215,7 @@ public class GalaxyEngine_webcalls {
 							c.setState("RUN_ERROR");
 							c.setStateMessage("Could not launch star initialization transformation "+cfg.initializationURI+" for the star data type "+GalaxyHelper.getGalacticTypeName(c));
 							GalaxyHelper.refreshGalaxy(geFactory, c);
-							return null;
+							return "{\"error\":\"Could not launch star initialization transformation "+cfg.initializationURI+" for the star data type "+GalaxyHelper.getGalacticTypeName(c)+"\"}";
 						}
 					}
 					else {
@@ -2243,7 +2253,7 @@ public class GalaxyEngine_webcalls {
 						c.setState("RUN_ERROR");
 						c.setStateMessage("Could not find the type configuration for the star data type "+GalaxyHelper.getGalacticTypeName(c));
 						GalaxyHelper.refreshGalaxy(geFactory, c);
-						return null;
+						return "{\"error\":\"Could not find the type configuration for the star data type "+GalaxyHelper.getGalacticTypeName(c)+"\"}";
 					}
 					
 					
@@ -2268,7 +2278,7 @@ public class GalaxyEngine_webcalls {
 							c.setState("RUN_ERROR");
 							c.setStateMessage("Could not launch star finalization transformation "+cfg.finalizationURI+" for the star data type "+GalaxyHelper.getGalacticTypeName(c));
 							GalaxyHelper.refreshGalaxy(geFactory, c);
-							return null;
+							return "\"error\":\"Could not launch star finalization transformation "+cfg.finalizationURI+" for the star data type "+GalaxyHelper.getGalacticTypeName(c)+"\"}";
 						}
 					}
 					else {
@@ -2292,7 +2302,7 @@ public class GalaxyEngine_webcalls {
 						c.setState("RUN_ERROR");
 						c.setStateMessage("Could not find the type configuration for the star data type "+GalaxyHelper.getGalacticTypeName(c));
 						GalaxyHelper.refreshGalaxy(geFactory, c);
-						return null;
+						return "{\"error\":\"Could not find the type configuration for the star data type "+GalaxyHelper.getGalacticTypeName(c)+"\"}";
 					}
 										
 					
@@ -2320,7 +2330,7 @@ public class GalaxyEngine_webcalls {
 							c.setState("RUN_ERROR");
 							c.setStateMessage("Could not launch cleanup star transformation "+cfg.cleanupURI+" for the star data type "+GalaxyHelper.getGalacticTypeName(c));
 							GalaxyHelper.refreshGalaxy(geFactory, c);
-							return null;
+							return "{\"error\":\"Could not launch cleanup star transformation "+cfg.cleanupURI+" for the star data type "+GalaxyHelper.getGalacticTypeName(c)+"\"}";
 						}
 					}
 					else {
@@ -2336,7 +2346,7 @@ public class GalaxyEngine_webcalls {
 					c.setState("RUN_ERROR");
 					c.setStateMessage("Invalid star run action - "+action);
 					GalaxyHelper.refreshGalaxy(geFactory, c);
-					return null;					
+					return "{\"error\":\"Invalid star run action - "+action+"\"}";
 				}
 				
 			} // Star
@@ -2350,7 +2360,7 @@ public class GalaxyEngine_webcalls {
 							if (!"CONFIGURATION_ERROR".equals(c.getState()) && !"CONFIGURATION_UNKNOWN".equals(c.getState()))
 								c.setState("CONFIGURATION_OK");							
 							GalaxyHelper.refreshGalaxy(geFactory, c);
-							return null;							
+							return "{}";							
 						}
 					}
 					
@@ -2374,14 +2384,17 @@ public class GalaxyEngine_webcalls {
 						cmd_.delete();
 						
 						if (ok) {
-							// the transformation must refresh the state by its own
+							// the transformation must refresh the state by its own;
+
+							smartRefreshGalaxy(raapi, project_id, c.getRAAPIReference());
+							
 							return "{}"; 
 						}
 						else {
 							c.setState("RUN_ERROR");
 							c.setStateMessage("Could not launch stellar wind emission transformation "+cfg.emissionURI+" for the stellar wind type "+GalaxyHelper.getGalacticTypeName(c));
 							GalaxyHelper.refreshGalaxy(geFactory, c);
-							return null;
+							return "{\"error\":\"Could not launch stellar wind emission transformation "+cfg.emissionURI+" for the stellar wind type "+GalaxyHelper.getGalacticTypeName(c)+"\"}";
 						}
 					}
 					else {
@@ -2396,7 +2409,7 @@ public class GalaxyEngine_webcalls {
 					c.setState("RUN_ERROR");
 					c.setStateMessage("Invalid stellar wind run action - "+action);
 					GalaxyHelper.refreshGalaxy(geFactory, c);
-					return null;										
+					return "{\"error\":\"Invalid stellar wind run action - "+action+"\"}";
 				}
 			} // StellarWind
 			
@@ -2411,7 +2424,7 @@ public class GalaxyEngine_webcalls {
 						if (!"CONFIGURATION_ERROR".equals(c.getState()) && !"CONFIGURATION_UNKNOWN".equals(c.getState()))
 							c.setState("CONFIGURATION_OK");
 						GalaxyHelper.refreshGalaxy(geFactory, c);
-						return null;
+						return "{}";
 					}
 					
 					GalacticTypes.GalacticTypeConfiguration cfg = GalacticTypes.getTypeConfiguration(GalaxyHelper.getGalacticTypeName(c));
@@ -2443,7 +2456,7 @@ public class GalaxyEngine_webcalls {
 						else {
 							c.setState("RUN_ERROR");
 							GalaxyHelper.refreshGalaxy(geFactory, c);
-							return null;
+							return "{\"error\":\"Run error\"}";
 						}
 					}
 					else {
@@ -2451,13 +2464,13 @@ public class GalaxyEngine_webcalls {
 						if ("NEW".equals( c.getState()) ) {
 							GalaxyHelper.deleteGalaxyComponent(c);
 							GalaxyHelper.refreshGalaxy(geFactory, null);
-							return null;
+							return "{}";
 						}
 						
 						c.setState("RUN_ERROR");
 						c.setStateMessage("No visualization for the given planet was found.");
 						GalaxyHelper.refreshGalaxy(geFactory, c);
-						return null;
+						return "{\"error\":\"No visualization for the given planet was found.\"}";
 					}
 					
 				}
@@ -2465,20 +2478,61 @@ public class GalaxyEngine_webcalls {
 					c.setState("RUN_ERROR");
 					c.setStateMessage("Invalid planet run action - "+action);
 					GalaxyHelper.refreshGalaxy(geFactory, c);
-					return null;										
+					return "{\"error\":\"Invalid planet run action - "+action+"\"}";
 				}
 			} // Planet
 			
 			c.setState("RUN_ERROR");
 			c.setStateMessage("Attempt to run an invalid galactic type.");
 			GalaxyHelper.refreshGalaxy(geFactory, c);
-			return null;
+			return "{\"error\":\"Attempt to run an invalid galactic type.\"}";
 		}
 		finally {
 			eeFactory.unsetRAAPI();
 			geFactory.unsetRAAPI();
 		}
 
+	}
+	
+	
+	public static void smartRefreshGalaxy(IWebMemory raapi, String project_id, long rObject) {
+		boolean idle = API.webCaller.getQueueSize(project_id)<=1; // the current webcall has to be counted as 1
+		if (idle) {
+			lv.lumii.datagalaxies.mm.GalaxyEngineMetamodelFactory geFactory = new lv.lumii.datagalaxies.mm.GalaxyEngineMetamodelFactory();
+			
+			lv.lumii.datagalaxies.mm.GalaxyComponent c = null;
+			try {
+				geFactory.setRAAPI(raapi, "", true);
+				
+				for (lv.lumii.datagalaxies.mm.GalaxyComponent cc : lv.lumii.datagalaxies.mm.GalaxyComponent.allObjects(geFactory)) {
+					if (rObject == cc.getRAAPIReference()) {
+						c = cc;
+						break;
+					}
+				}
+
+			} catch (Throwable e) {
+				return; // hmmm... that's bad! we won't refresh the galaxy...
+			}
+			if (c==null)
+				return;
+			
+			System.out.println("state is "+c.getState());
+			if ("RUNNING".equals(c.getState())) {
+				c.setState("RUN_ERROR");
+				c.setStateMessage("Unhandled run error.");
+				GalaxyHelper.refreshGalaxy(geFactory, c);
+			}
+			
+		}
+		else {
+			WebCallSeed seed2 = new WebCallSeed();
+			seed2.actionName = "SmartRefreshGalaxy";
+			seed2.project_id = project_id;
+			seed2.webmemArgument = rObject;
+			seed2.callingConventions = IWebCaller.CallingConventions.WEBMEMCALL;
+			API.webCaller.enqueue(seed2);
+		}
 	}
 	
 	

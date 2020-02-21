@@ -1,9 +1,8 @@
 package lv.lumii.datagalaxies;
 
-
 public class GalaxyHelper {
 	
-	private static boolean DEBUG = true;
+	//private static Logger logger =  LoggerFactory.getLogger(GalaxyHelper.class);
 	
 	public static String getGalacticTypeName(lv.lumii.datagalaxies.mm.GalaxyComponent componentObj)
 	// for stars, returns the type name of the corresponding star data;
@@ -30,7 +29,6 @@ public class GalaxyHelper {
 		if (!componentObj.getFrame().isEmpty()) {
 						
 			
-			if (DEBUG)  System.out.println("Detach previous frame1 for "+componentObj.getId());
 			// detaching previous frame...
 			lv.lumii.datagalaxies.mm.Frame frame_ = componentObj.getFrame().get(0);
 			
@@ -38,9 +36,7 @@ public class GalaxyHelper {
 			lv.lumii.datagalaxies.eemm.Frame frame =  (lv.lumii.datagalaxies.eemm.Frame)eeFactory.findOrCreateRAAPIReferenceWrapper(frame_.getRAAPIReference(), false); 
 			
 		    componentObj.setFrame(null); // detaching the frame from the galaxy component...
-		    
-		    if (DEBUG)  System.out.println("Detach previous frame2 "+frame.getRAAPIReference()+"for "+componentObj.getId());
-		    
+		    		    
 		    lv.lumii.datagalaxies.eemm.DetachFrameCommand dfc = eeFactory.createDetachFrameCommand();
 			dfc.setFrame(frame);
 			dfc.setPermanently(true);
@@ -76,14 +72,10 @@ public class GalaxyHelper {
 	{
 		closeComponentFrame(componentObj);
 		
-		System.out.println("!Deleting component "+componentObj.getId()+" (its state is "+componentObj.getState()+")...");
-		if (DEBUG) System.out.println("Deleting component "+componentObj.getId()+" (its state is "+componentObj.getState()+")...");
 		if (componentObj instanceof lv.lumii.datagalaxies.mm.StellarWind) {			
 			if ("NEW".equals( componentObj.getState() )) {
-				if (DEBUG) System.out.println("  Deleting also target star "+((lv.lumii.datagalaxies.mm.StellarWind) componentObj).getTarget().get(0).getId());
 				if (!((lv.lumii.datagalaxies.mm.StellarWind) componentObj).getTarget().isEmpty())
 					((lv.lumii.datagalaxies.mm.StellarWind) componentObj).getTarget().get(0).delete();
-				if (DEBUG) System.out.println("  Target star deleted = "+(((lv.lumii.datagalaxies.mm.StellarWind) componentObj).getTarget().size()==0));
 			}
 		}
 		if (componentObj instanceof lv.lumii.datagalaxies.mm.Star) {
