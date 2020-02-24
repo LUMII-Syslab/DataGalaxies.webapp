@@ -1,8 +1,8 @@
 <html>
 <head>
-  <script src="/tda.js"></script>
-  <script src="/jquery-1.11.1.min.js"></script>
-  <script src="/netchart/lib/zoomcharts.js"></script>
+  <script src="/jquery.min.js"></script>
+  <script src="/webappos.js"></script>
+  <script src="../../netchart/lib/zoomcharts.js"></script>
   <meta charset="utf-8">
 </head>
 
@@ -10,7 +10,7 @@
  <div id="chartContainer"></div> 
  <script type="text/javascript">
   function load(planet) {
-   var s = tda.fileContentAsUTF8String(planet.star[0].starData[0].fileName);
+   var s = webappos.webcall_and_wait("webappos.getFileContentAsUTF8String", planet.star[0].starData[0].fileName).content;
    alert(s);
    t = new TimeChart({
         container: document.getElementById("chartContainer"),
@@ -18,10 +18,8 @@
         {
             units:["s"],
 		    timestampInSeconds:true,
-//			preload:"{values: [[100, 8], [1000, 15]], unit: \"ms\", from: 0, to: 3000}"
-//            url:"C:\Users\User\Desktop\Stabini\time_sec_All.json"
-//            url:"/Stabini/time_sec_All.json"
-	      url:"/filedownload/"+tda.cloudLocation+"/"+planet.star[0].starData[0].fileName
+	      url:"/services/filedownload/"+webappos.project_id+"/"+planet.star[0].starData[0].fileName
+                  +"?login="+webappos.login+"&ws_token="+webappos.ws_token+"&project_id"=webappos.project_id
 	    },
 		area: {
 			initialDisplayUnit:"1 m"

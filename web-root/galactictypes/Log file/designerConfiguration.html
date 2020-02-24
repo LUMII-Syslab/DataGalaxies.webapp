@@ -1,5 +1,5 @@
-<script src="/tda.js"></script>
-<script src="/jquery-1.11.1.min.js"></script>
+<script src="/jquery.min.js"></script>
+<script src="/webappos.js"></script>
 
 Star name: <input type="edit" id="starName" value="Log file"/>
 <p>
@@ -13,7 +13,7 @@ Choose .log file:
 function load(star)
 {
 
-  star = tda.jsonsubmit("loadObjects", {
+  star = webappos.webcall_and_wait("loadObjects", {
       navigationExpression : ".starData.*",
       objects : [star]
     }
@@ -22,7 +22,7 @@ function load(star)
   if (star.name)
     $("#starName").value = star.name;
 
-  tda.initializeFileInput(finput, star.starData[0].fileName);
+  webappos.js_util.initialize_file_input(finput, star.starData[0].fileName);
 }
 
 function store(star)
@@ -31,7 +31,7 @@ function store(star)
   if (!star.name)
     star.state = "CONFIGURATION_ERROR";
 
-  star.starData[0].fileName = tda.finalizeFileInput(finput, true);
+  star.starData[0].fileName = webappos.js_util.upload_file_input(finput, webappos.project_id);
 
   if (!star.starData[0].fileName)
     star.state = "CONFIGURATION_ERROR";
@@ -39,7 +39,6 @@ function store(star)
 
 function cancel()
 {
-  tda.finalizeFileInput(finput, false);
 }
 
 </script>

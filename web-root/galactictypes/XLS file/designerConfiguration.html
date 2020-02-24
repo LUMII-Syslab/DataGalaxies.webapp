@@ -1,5 +1,5 @@
-<script src="/tda.js"></script>
-<script src="/jquery-1.11.1.min.js"></script>
+<script src="/jquery.min.js"></script>
+<script src="/webappos.js"></script>
 
 Star name: <input type="edit" id="starName" value="xls file"/>
 <p>
@@ -28,8 +28,7 @@ function load(star)
   }
   else {
     file_name.parentNode.removeChild(file_name);
-    tda.initializeFileInput(finput, star.starData[0].fileName);
-    cancel = function () { tda.finalizeFileInput(finput, false); }
+    webappos.js_util.initialize_file_input(finput, star.starData[0].fileName);
   }
 
   if (star.name)
@@ -49,7 +48,7 @@ function store(star)
     star.starData[0].fileName = ftext.value;
   }
   else
-    star.starData[0].fileName = tda.finalizeFileInput(finput, true);
+    star.starData[0].fileName = webappos.js_util.upload_file_input(finput, webappos.project_id);
 
   if (!star.starData[0].fileName)
     star.state = "CONFIGURATION_ERROR";

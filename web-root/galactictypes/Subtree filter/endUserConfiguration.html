@@ -3,8 +3,8 @@
 <script src="/dojo/dojo.js" data-dojo-config="async:0"></script>
 <link rel="stylesheet" href="/dijit/themes/dijit.css" media="screen">
 <link rel="stylesheet" href="/dijit/themes/claro/claro.css" media="screen">
-<script src="/tda.js"></script>
-<script src="/jquery-1.11.1.min.js"></script>
+<script src="/jquery.min.js"></script>
+<script src="/webappos.js"></script>
 </head>
 <body class="claro">
 <script>
@@ -64,12 +64,12 @@ function load(crossFilter)
   if (!userAttributeName)
     userAttributeName = "name";
 
-  var stars = tda.jsonsubmit("findObjects", {
+  var stars = webappos.webcall_and_wait("findObjects", {
     isKindOf: "Star",
     id : crossFilter.sourceStarId
   });
 
-  stars = tda.jsonsubmit("loadObjects", {
+  stars = webappos.webcall_and_wait("loadObjects", {
     navigationExpression: "starData.*",
     objects: stars
   });
@@ -79,7 +79,7 @@ function load(crossFilter)
   if (!stars || (stars.length==0)) {
   }
   else {
-    var jsonS = tda.fileContentAsUTF8String(stars[0].starData[0].fileName);
+    var jsonS = webappos.webcall_and_wait("webappos.getFileContentAsUTF8String", stars[0].starData[0].fileName).content;
     try {
       json = JSON.parse(jsonS);
     }
@@ -107,7 +107,6 @@ function load(crossFilter)
   require([
       "dojo/_base/window", "dojo/store/Memory",
       "dijit/tree/ObjectStoreModel", "dijit/Tree",
-      "/tda.js",
       "dojo/domReady!"
   ], function(win, Memory, ObjectStoreModel, Tree){
 

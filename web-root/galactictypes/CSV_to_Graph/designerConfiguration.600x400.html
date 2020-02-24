@@ -27,12 +27,13 @@ function load(stWind)
 
 }
 
-function store(stWind)
+function storeAsync(stWind, fAfter)
 {
   stWind.name = document.getElementById("stWindName").value;
   if (!stWind.name) {
     stWind.stateMessage = "Stellar wind name not specified.";
     stWind.state = "CONFIGURATION_ERROR";
+    fAfter();
     return;
   }
 
@@ -40,6 +41,7 @@ function store(stWind)
   if (!stWind.sourceColumnName) {
     stWind.stateMessage = "Source column name not specified.";
     stWind.state = "CONFIGURATION_ERROR";
+    fAfter();
     return;
   }
 
@@ -47,20 +49,28 @@ function store(stWind)
   if (!stWind.targetColumnName) {
     stWind.stateMessage = "Target column name not specified.";
     stWind.state = "CONFIGURATION_ERROR";
+    fAfter();
     return;
   }
 
   if ((!stWind.target[0].starData) || (stWind.target[0].starData.length==0)) {
-    webappos.webcall_and_wait("putGalacticTypeIntoMetamodel", "JSON file");
-    let starData = new webmem["JSON file"]();
 
-    starData.setFileName(stWind.name+"result.json");
-    stWind.target[0].starData = [{reference:starData.reference}];
-    stWind.target[0].state = "CONFIGURATION_OK";
+    webappos.webcall("putGalacticTypeIntoMetamodel", "JSON file").then(()=>{
+
+      starData = new webmem["JSON file"]();
+      starData.setFileName(stWind.name+"result.json");
+
+      stWind.target[0].starData = [{reference: starData.reference}];
+      stWind.target[0].state = "CONFIGURATION_OK";
+
+      fAfter();
+    });
   }
-
-  if (!stWind.target[0].starData[0].fileName)
-    stWind.target[0].starData[0].fileName = stWind.name+"result.json";
+  else {
+    if (!stWind.target[0].starData[0].fileName)
+      stWind.target[0].starData[0].fileName = stWind.name+"result.json";
+    fAfter();
+  }
 }
 
 </script>

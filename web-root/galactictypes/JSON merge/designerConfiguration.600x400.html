@@ -1,7 +1,7 @@
 <html>
 <head>
-<script src="/tda.js"></script>
-<!--script src="/jquery-1.11.1.min.js"></script-->
+<script src="/jquery.js"></script>
+<script src="/webappos.js"></script>
 </head>
 <body>
 
@@ -53,16 +53,22 @@ function store(stWind)
 
 
   if ((!stWind.target[0].starData) || (stWind.target[0].starData.length==0)) {
-    tda.jsonsubmit("putGalacticTypeIntoMetamodel", "JSON file");
-    starData = tda.jsonsubmit("JSON file", {
-                  fileName:stWind.name+"result.json",
-               });
-    stWind.target[0].starData = [starData];
-    stWind.target[0].state = "CONFIGURATION_OK";
-  }
 
-  if (!stWind.target[0].starData[0].fileName)
-    stWind.target[0].starData[0].fileName = stWind.name+"result.json";
+    webappos.webcall("putGalacticTypeIntoMetamodel", "JSON file").then(()=>{
+
+      starData = new webmem["JSON file"]();
+      starData.setFileName(stWind.name+"result.json");
+
+      stWind.target[0].starData = [{reference: starData.reference}];
+      stWind.target[0].state = "CONFIGURATION_OK";
+
+      fAfter();
+    });
+  }
+  else {
+    if (!stWind.target[0].starData[0].fileName)
+      stWind.target[0].starData[0].fileName = stWind.name+"result.json";
+  }
 }
 
 </script>

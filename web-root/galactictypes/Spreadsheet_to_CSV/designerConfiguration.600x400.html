@@ -1,7 +1,7 @@
 <html>
 <head>
-<script src="/tda.js"></script>
-<script src="/jquery-1.11.1.min.js"></script>
+<script src="/jquery.min.js"></script>
+<script src="/webappos.js"></script>
 </head>
 <body>
 
@@ -17,7 +17,7 @@ var stellarWind = null;
 
 function load(stWind)
 {
-  stWind = tda.jsonsubmit("loadObjects", {
+  stWind = webappos.webcall_and_wait("loadObjects", {
     navigationExpression: ".crossFilter.*",
     objects: [stWind]
   })[0];
@@ -53,9 +53,9 @@ function load(stWind)
 
 }
 
-function store(stWind)
+function storeAsync(stWind, fAfter)
 {
-  var filters = tda.jsonsubmit("loadObjects", {
+  var filters = webappos.webcall_and_wait ("loadObjects", {
     navigationExpression: ".crossFilter.*",
     objects: [stWind]
   })[0].crossFilter;
@@ -73,16 +73,24 @@ function store(stWind)
 
 
   if ((!stWind.target[0].starData) || (stWind.target[0].starData.length==0)) {
-    tda.jsonsubmit("putGalacticTypeIntoMetamodel", "CSV");
-    starData = tda.jsonsubmit("CSV", {
-                  fileName:stWind.name+"result.csv",
-               });
-    stWind.target[0].starData = [starData];
-    stWind.target[0].state = "CONFIGURATION_OK";
-  }
 
-  if (!stWind.target[0].starData[0].fileName)
-    stWind.target[0].starData[0].fileName = stWind.name+"result.csv";
+    webappos.webcall("putGalacticTypeIntoMetamodel", "CSV").then(()=>{
+
+      starData = new webmem.CSV();
+      starData.setFileName(stWind.name+"result.csv");
+
+      stWind.target[0].starData = [{reference: starData.reference}];
+      stWind.target[0].state = "CONFIGURATION_OK";
+
+      fAfter();
+    });
+
+  }
+  else {
+    if (!stWind.target[0].starData[0].fileName)
+      stWind.target[0].starData[0].fileName = stWind.name+"result.csv";
+    fAfter();
+  }
 
 }
 

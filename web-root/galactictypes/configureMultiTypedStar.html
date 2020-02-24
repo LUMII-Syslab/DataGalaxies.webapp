@@ -112,7 +112,7 @@
         else
           starDataType += "," + tree.selectedItems[i].name;
 
-        tda.jsonsubmit("putGalacticTypeIntoMetamodel", tree.selectedItems[i].name);
+        webappos.webcall_and_wait("putGalacticTypeIntoMetamodel", tree.selectedItems[i].name);
       }
       star.starDataType = starDataType;
 

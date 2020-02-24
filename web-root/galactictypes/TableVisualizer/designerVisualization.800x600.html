@@ -1,15 +1,13 @@
 <html>
 <head>
-  <script src="/tda.js"></script>
-  <script src="/jquery-1.11.1.min.js"></script>
+  <script src="/jquery.min.js"></script>
+  <script src="/webappos.js"></script>
   <script src="PapaParse-4.1.0/papaparse.min.js"></script>
   <meta charset="utf-8">
 
-  <script src="/dojo/dojo.js" data-dojo-config="async:0"></script>
   <link rel="stylesheet" href="/dijit/themes/claro/claro.css" media="screen">
   <link rel="stylesheet" href="/dojox/grid/resources/Grid.css" media="screen">
   <link rel="stylesheet" href="/dojox/grid/resources/claroGrid.css" media="screen">
-  <link rel="stylesheet" href="/EnvironmentEngine.css" media="screen">
 
   <script>
     function bodyResized() {
@@ -31,7 +29,7 @@
 
   <script>
     function load(planet) {
-      var csv = tda.fileContentAsUTF8String(planet.star[0].starData[0].fileName);
+      var csv = webappos.webcall_and_wait("webappos.getFileContentAsUTF8String", planet.star[0].starData[0].fileName).content;
       var data = Papa.parse(csv);
 
       if (data.data.length == 0)

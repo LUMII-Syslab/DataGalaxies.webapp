@@ -22,28 +22,32 @@
 
       }
 
-      function store(stWind) {
+      function store(stWind, fAfter) {
         stWind.name = document.getElementById("stWindName").value;
         if (!stWind.name) {
           stWind.state = "CONFIGURATION_ERROR";
+          fAfter();
           return;
         }
 
 
         if ((!stWind.target[0].starData) || (stWind.target[0].starData.length == 0)) {
-          webappos.webcall_and_wait("putGalacticTypeIntoMetamodel", "JSON file");
-          //TODO ?? perhaps, we have to wait when the "JSON file" is synhronized; can be implemented using async webappos.webcall(...).then(...)
-          let starData = new webmem["JSON file"]();
+          webappos.webcall("putGalacticTypeIntoMetamodel", "JSON file").then(()=>{
 
-          starData.setFileName(stWind.name + "result.json");
-          stWind.target[0].starData = [{
-            reference: starData.reference
-          }];
-          stWind.target[0].state = "CONFIGURATION_OK";
+            starData = new webmem["JSON file"]();
+            starData.setFileName(stWind.name+"result.json");
+
+            stWind.target[0].starData = [{reference: starData.reference}];
+            stWind.target[0].state = "CONFIGURATION_OK";
+
+            fAfter();
+          });
         }
-
-        if (!stWind.target[0].starData[0].fileName)
-          stWind.target[0].starData[0].fileName = stWind.name + "result.json";
+        else {
+          if (!stWind.target[0].starData[0].fileName)
+            stWind.target[0].starData[0].fileName = stWind.name + "result.json";
+          fAfter();
+        }
       }
     </script>
 

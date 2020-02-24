@@ -1,7 +1,7 @@
 <html>
 <head>
-<script src="/tda.js"></script>
-<!--script src="/jquery-1.11.1.min.js"></script-->
+<script src="/jquery.min.js"></script>
+<script src="/webappos.js"></script>
 </head>
 <body>
 
@@ -58,11 +58,11 @@ function load(_crossFilter)
 
   loadCalled = true;
 
-  var starDatas = tda.jsonsubmit("findObjects", {
+  var starDatas = webappos.webcall_and_wait("findObjects", {
     isKindOf: "JSON file"
   });
 
-  starDatas = tda.jsonsubmit("loadObjects", {
+  starDatas = webappos.webcall_and_wait("loadObjects", {
     navigationExpressions: [".star.*"],
     objects: starDatas
   });

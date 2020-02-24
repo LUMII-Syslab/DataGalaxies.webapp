@@ -1,7 +1,7 @@
 <html>
 <head>
-<script src="/tda.js"></script>
-<script src="/jquery-1.11.1.min.js"></script>
+<script src="/jquery.min.js"></script>
+<script src="/webappos.js"></script>
 </head>
 <body>
 <span style="float:right;"><a href="license.html" target="_blank">License</a></span><br>
@@ -20,7 +20,7 @@
 
 function load(_planet)
 {
-  planet = tda.jsonsubmit("loadObjects", {
+  planet = webappos.webcall_and_wait("loadObjects", {
     navigationExpression: ".crossFilter.*",
     objects: [_planet]
   })[0];
@@ -57,7 +57,7 @@ function load(_planet)
 
 function store(planet)
 {
-  var filters = tda.jsonsubmit("loadObjects", {
+  var filters = webappos.webcall_and_wait("loadObjects", {
     navigationExpression: ".crossFilter.*",
     objects: [planet]
   })[0].crossFilter;

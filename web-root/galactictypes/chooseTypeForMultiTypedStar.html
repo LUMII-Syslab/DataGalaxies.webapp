@@ -117,9 +117,10 @@
     var storedStar; // set in store() for finalize()
     var newFrameLocation; // set in store() for finalize()
 
-    function store(star) {
+    function storeAsync(star, fAfter) {
       if (!tree.selectedItem) {
         star.state = "CONFIGURATION_ERROR";
+        fAfter();
         return;
       }
       var answer = webappos.webcall_and_wait("isFinalGalacticType", tree.selectedItem.name);
@@ -129,30 +130,37 @@
 
         // creating a star data instance...
 
-        webappos.webcall_and_wait("putGalacticTypeIntoMetamodel", tree.selectedItem.name);
 
-        var starData = new webmem[tree.selectedItem.name]();
+        webappos.webcall("putGalacticTypeIntoMetamodel", tree.selectedItem.name).then(()=>{
 
-        star.starData = [{
-          reference: starData.reference
-        }];
+          var starData = new webmem[tree.selectedItem.name]();
+
+          star.starData = [{
+            reference: starData.reference
+          }];
 
 
-        // getting current frame location...
-        var star1 = webappos.webcall_and_wait("loadObjects", {
-          navigationExpression: ".frame.*",
-          objects: [star]
-        })[0];
+          // getting current frame location...
+          var star1 = webappos.webcall_and_wait("loadObjects", {
+            navigationExpression: ".frame.*",
+            objects: [star]
+          })[0];
 
-        newFrameLocation = "popup";
-        if (star1.frame[0].location) {
-          newFrameLocation = star1.frame[0].location;
-        }
+          newFrameLocation = "popup";
+          if (star1.frame[0].location) {
+            newFrameLocation = star1.frame[0].location;
+          }
 
-        storedStar = star1;
+          storedStar = star1;
+
+          fAfter();
+        });
+
+
 
       } else {
         star.state = "CONFIGURATION_UNKNOWN";
+        fAfter();
       }
     }
 
