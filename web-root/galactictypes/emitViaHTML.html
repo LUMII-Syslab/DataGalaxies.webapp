@@ -70,12 +70,9 @@
     webappos.webcall_and_wait("storeObjects", [galaxyComponent]);
 
     let cmd = new webmem.RefreshGalaxyCommand();
+    cmd.setModifiedComponent(webmem[galaxyComponent.reference]);
     cmd.setDataGalaxy(webmem.DataGalaxy.getFirstObject());
     webmem.submit(cmd);
-
-
-
-
   }
 
 

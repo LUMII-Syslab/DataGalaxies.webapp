@@ -189,26 +189,16 @@ function onOK()
            galaxyComponent.producer[i].state = "CONFIGURATION_OK";
       }
     }
-//    console.log("onOK1", galaxyComponent);
-//    debugFilters();
     webappos.webcall_and_wait("storeObjects", [galaxyComponent]);  
-
-//    console.log("onOK2", galaxyComponent);
-//    debugFilters();
 
     let ev = new webmem.CloseFrameRequestedEvent();
     ev.setForce(true);
     ev.linkFrame(webmem[parseInt(GetURLParameter('frameReference'))]);
     webmem.submit(ev);
 
-    var dataGalaxy = webappos.webcall_and_wait("findObjects", {
-        isKindOf : "DataGalaxy"
-      }
-    )[0];
-
     let cmd = new webmem.RefreshGalaxyCommand();
     cmd.setModifiedComponent(webmem[galaxyComponent.reference]);
-    cmd.setDataGalaxy(webmem[dataGalaxy.reference]);
+    cmd.setDataGalaxy(webmem.DataGalaxy.getFirstObject());
     webmem.submit(cmd);
   };
 
@@ -278,12 +268,6 @@ function onCancel()
   if (!async)
     fAfter();
 
-}
-
-function finalize() {
-  if (!finalized) {
-    onCancel();
-  }
 }
 
 

@@ -521,12 +521,15 @@ public class GalaxyEngine_webcalls {
 					try { JSONObject xy = layoutInfo.getJSONObject(star.getId()); location = xy.getDouble("x")+","+xy.getDouble("y"); star.setLocation(location); } catch (Throwable t) {}
 				}
 				if ((location != null) && (!location.isEmpty())) {
+					boolean newLoc = location.startsWith("NEW:");
+					if (newLoc)
+						location=location.substring(4);
 					int i = location.indexOf(',');
 					if (i>=0) {
 						o.put("x", Double.parseDouble(location.substring(0,i)));
 						o.put("y", Double.parseDouble(location.substring(i+1)));
 						JSONObject fixed = new JSONObject();
-						fixed.put("x", true); fixed.put("y", true);
+						fixed.put("x", !newLoc); fixed.put("y", !newLoc);
 						o.put("fixed", fixed);
 					}
 				}
@@ -556,12 +559,15 @@ public class GalaxyEngine_webcalls {
 					try { JSONObject xy = layoutInfo.getJSONObject(planet.getId()); location = xy.getDouble("x")+","+xy.getDouble("y"); planet.setLocation(location); } catch (Throwable t) {}
 				}
 				if ((location != null) && (!location.isEmpty())) {
+					boolean newLoc = location.startsWith("NEW:");
+					if (newLoc)
+						location=location.substring(4);
 					int i = location.indexOf(',');
 					if (i>=0) {
 						o.put("x", Double.parseDouble(location.substring(0,i)));
 						o.put("y", Double.parseDouble(location.substring(i+1)));
 						JSONObject fixed = new JSONObject();
-						fixed.put("x", true); fixed.put("y", true);
+						fixed.put("x", !newLoc); fixed.put("y", !newLoc);
 						o.put("fixed", fixed);
 					}
 				}
@@ -590,12 +596,15 @@ public class GalaxyEngine_webcalls {
 					try { JSONObject xy = layoutInfo.getJSONObject(crossFilter.getId()); location = xy.getDouble("x")+","+xy.getDouble("y"); crossFilter.setLocation(location); } catch (Throwable t) {}
 				}
 				if ((location != null) && (!location.isEmpty())) {
+					boolean newLoc = location.startsWith("NEW:");
+					if (newLoc)
+						location=location.substring(4);
 					int i = location.indexOf(',');
 					if (i>=0) {
 						o.put("x", Double.parseDouble(location.substring(0,i)));
 						o.put("y", Double.parseDouble(location.substring(i+1)));
 						JSONObject fixed = new JSONObject();
-						fixed.put("x", true); fixed.put("y", true);
+						fixed.put("x", !newLoc); fixed.put("y", !newLoc);
 						o.put("fixed", fixed);
 					}
 				}
@@ -624,12 +633,15 @@ public class GalaxyEngine_webcalls {
 					try { JSONObject xy = layoutInfo.getJSONObject(stellarWind.getId()); location = xy.getDouble("x")+","+xy.getDouble("y"); stellarWind.setLocation(location); } catch (Throwable t) {}
 				}
 				if ((location != null) && (!location.isEmpty())) {
+					boolean newLoc = location.startsWith("NEW:");
+					if (newLoc)
+						location=location.substring(4);
 					int i = location.indexOf(',');
 					if (i>=0) {
 						o.put("x", Double.parseDouble(location.substring(0,i)));
 						o.put("y", Double.parseDouble(location.substring(i+1)));
 						JSONObject fixed = new JSONObject();
-						fixed.put("x", true); fixed.put("y", true);
+						fixed.put("x", !newLoc); fixed.put("y", !newLoc);
 						o.put("fixed", fixed);
 					}
 				}
@@ -825,15 +837,9 @@ public class GalaxyEngine_webcalls {
 			try {
 				retVal.put("frameReference", rFrame);
 
-				JSONArray modifiedComponent = new JSONArray();
-				retVal.put("modifiedComponent", modifiedComponent);
-							
-				for (lv.lumii.datagalaxies.mm.GalaxyComponent c : cmd.getModifiedComponent()) {
-					JSONObject obj = new JSONObject();
-					obj.put("id", c.getId());
-					obj.put("reference", c.getRAAPIReference());
-					modifiedComponent.put(obj);
-				}
+				lv.lumii.datagalaxies.mm.GalaxyComponent c = cmd.getModifiedComponent().get(0);
+				if (c!=null)
+					retVal.put("modifiedComponentReference", c.getRAAPIReference());							
 			} catch (JSONException e1) {
 			}
 			
@@ -2134,8 +2140,10 @@ public class GalaxyEngine_webcalls {
 				return "{\"error\":\"Component not found.\"}";
 			}
 				
-			if (c instanceof lv.lumii.datagalaxies.mm.CrossFilter)		
+			if (c instanceof lv.lumii.datagalaxies.mm.CrossFilter)	{	
+				GalaxyHelper.refreshGalaxy(geFactory, c);
 				return "{}";
+			}
 			
 			if ("RUN_OK".equals(c.getState()) /*&& !"FinalizeStar".equals(action)*/) {
 				GalaxyHelper.refreshGalaxy(geFactory, c);
@@ -2208,7 +2216,8 @@ public class GalaxyEngine_webcalls {
 						if (ok) {
 							c.setState("RUNNING");
 							c.setStateMessage(null);
-							// the transformation must refresh the state by its own
+							// the transformation must refresh the state by its own, but we help it...							
+							smartRefreshGalaxy(raapi, project_id, c.getRAAPIReference());
 							return "{}";
 						}
 						else {
@@ -2269,9 +2278,10 @@ public class GalaxyEngine_webcalls {
 						cmd_.delete();	
 						
 						if (ok) {
-							// the transformation must refresh the state by its own
+							// the transformation must refresh the state by its own, but we help it...
 							c.setState("RUNNING");
 							c.setStateMessage(null);
+							smartRefreshGalaxy(raapi, project_id, c.getRAAPIReference());
 							return "{}";
 						}
 						else {
@@ -2323,7 +2333,8 @@ public class GalaxyEngine_webcalls {
 						cmd_.delete();	
 						
 						if (ok) {
-							// the transformation must refresh the state by its own
+							// the transformation must refresh the state by its own, but we help it..
+							smartRefreshGalaxy(raapi, project_id, c.getRAAPIReference());
 							return "{}";
 						}
 						else {
@@ -2384,7 +2395,7 @@ public class GalaxyEngine_webcalls {
 						cmd_.delete();
 						
 						if (ok) {
-							// the transformation must refresh the state by its own;
+							// the transformation must refresh the state by its own; but we help it in case it fails...
 
 							smartRefreshGalaxy(raapi, project_id, c.getRAAPIReference());
 							
@@ -2450,7 +2461,8 @@ public class GalaxyEngine_webcalls {
 						if (ok) {
 							c.setState("RUNNING");
 							c.setStateMessage(null);
-							// the transformation must refresh the state by its own
+							// the transformation must refresh the state by its own, but we help it..
+							smartRefreshGalaxy(raapi, project_id, c.getRAAPIReference());
 							return "{}";
 						}
 						else {
@@ -2498,6 +2510,49 @@ public class GalaxyEngine_webcalls {
 	public static void smartRefreshGalaxy(IWebMemory raapi, String project_id, long rObject) {
 		boolean idle = API.webCaller.getQueueSize(project_id)<=1; // the current webcall has to be counted as 1
 		if (idle) {
+			
+			lv.lumii.datagalaxies.mm.GalaxyEngineMetamodelFactory geFactory = 
+					raapi.elevate(lv.lumii.datagalaxies.mm.GalaxyEngineMetamodelFactory.class);
+			if (geFactory == null) {
+				return; // hmmm... that's bad! we won't refresh the galaxy...
+			}
+			
+			JSONObject arg = new JSONObject();
+			
+			lv.lumii.datagalaxies.mm.DataGalaxy dg = lv.lumii.datagalaxies.mm.DataGalaxy.firstObject(geFactory);
+			lv.lumii.datagalaxies.mm.Frame f = dg.getFrame().get(0);
+			try {
+				arg.put("frameReference", f.getRAAPIReference());
+			} catch (JSONException e) {
+			}
+			try {
+				if (rObject!=0)
+					arg.put("modifiedComponentReference", rObject);
+			} catch (JSONException e) {
+			}
+			try {
+				arg.put("timeout", 3000);
+			} catch (JSONException e) {
+			}
+			
+			
+			WebMemoryContext ctx = raapi.getContext();
+			IWebCaller.WebCallSeed seed = new IWebCaller.WebCallSeed();
+						
+			seed.actionName = "continueRefreshGalaxyCommand";
+			
+			seed.callingConventions = WebCaller.CallingConventions.JSONCALL;
+			seed.jsonArgument = arg.toString();
+			
+			if (ctx!=null) {
+				seed.login = ctx.login;
+				seed.project_id = ctx.project_id;
+			}
+	
+	  		API.webCaller.enqueue(seed);
+	  		return;
+
+			/*
 			lv.lumii.datagalaxies.mm.GalaxyEngineMetamodelFactory geFactory = new lv.lumii.datagalaxies.mm.GalaxyEngineMetamodelFactory();
 			
 			lv.lumii.datagalaxies.mm.GalaxyComponent c = null;
@@ -2514,16 +2569,26 @@ public class GalaxyEngine_webcalls {
 			} catch (Throwable e) {
 				return; // hmmm... that's bad! we won't refresh the galaxy...
 			}
-			if (c==null)
+			if (c==null) {
+				//GalaxyHelper.refreshGalaxy(geFactory, null);
 				return;
+			}
 			
 			System.out.println("state is "+c.getState());
-			if ("RUNNING".equals(c.getState())) {
+			String s = c.getState();
+			
+			if ("RUNNING".equals(s)) {
 				c.setState("RUN_ERROR");
 				c.setStateMessage("Unhandled run error.");
 				GalaxyHelper.refreshGalaxy(geFactory, c);
+				return;
 			}
 			
+
+			if (s!=null && s.indexOf("ERROR")<0) {
+				GalaxyHelper.refreshGalaxy(geFactory, c);
+				return;
+			}*/
 		}
 		else {
 			WebCallSeed seed2 = new WebCallSeed();

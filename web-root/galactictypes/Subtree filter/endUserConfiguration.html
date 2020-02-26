@@ -79,7 +79,7 @@ function load(crossFilter)
   if (!stars || (stars.length==0)) {
   }
   else {
-    var jsonS = webappos.webcall_and_wait("webappos.getFileContentAsUTF8String", stars[0].starData[0].fileName).content;
+    var jsonS = webappos.webcall_and_wait("webappos.getFileContentFromCurrentProjectAsUTF8String", stars[0].starData[0].fileName).content;
     try {
       json = JSON.parse(jsonS);
     }

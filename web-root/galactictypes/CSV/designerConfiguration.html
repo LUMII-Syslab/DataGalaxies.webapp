@@ -12,7 +12,7 @@ Choose .csv file:
 
 <div id="file_name">
 Enter target .csv file name:
-<input id="ftext" type="text"/>
+<input id="ftext" type="text" value="data.csv"/>
 <br>
 </div>
 
@@ -24,7 +24,8 @@ function load(star)
 {
   if (star.producer) {
     file_choose.parentNode.removeChild(file_choose);
-    ftext.value = star.starData[0].fileName;
+    if (star.starData && star.starData[0] && star.starData[0].fileName)
+      ftext.value = star.starData[0].fileName;
   }
   else {
     file_name.parentNode.removeChild(file_name);

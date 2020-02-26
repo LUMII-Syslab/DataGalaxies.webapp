@@ -171,7 +171,7 @@ catch(ttt) {console.log(ttt);}
           webmem[f.reference].setSelectedValues(f.selectedValues);
 
           let cmd = new webmem.RefreshGalaxyCommand();
-          cmd.setModifiedComponent(webmem[reference:f.reference]);
+          cmd.setModifiedComponent(webmem[f.reference]);
           cmd.setDataGalaxy(webmem.DataGalaxy.getFirstObject());
           webmem.submit(cmd);
 
@@ -183,7 +183,7 @@ catch(ttt) {console.log(ttt);}
     function load(planet) {
 
 
-      var s = webappos.webcall_and_wait("webappos.getFileContentAsUTF8String",planet.star[0].starData[0].fileName).content;
+      var s = webappos.webcall_and_wait("webappos.getFileContentFromCurrentProjectAsUTF8String",planet.star[0].starData[0].fileName).content;
       json = JSON.parse(s);
 
       if (!($.isArray(json)))

@@ -143,159 +143,348 @@
         submenuLeftOffset: -4,
         submenuTopOffset: -5,
         onSelect: function (e, context) {
+          let myThis = this;
+          setTimeout(function(){
+            let nodes = chart.getSelectedNodes();
 
-          let nodes = chart.getSelectedNodes();
+            if ($(myThis).attr('id').substr(0, 7) == "NewStar") {
+              if ($(myThis).children().length == 0) {
 
-          if ($(this).attr('id').substr(0, 7) == "NewStar") {
-            if ($(this).children().length == 0) {
+                let wmobj = new webmem.Star();
+                wmobj.setLocation("NEW:"+(chart.canvasPoint.x+100) + "," + chart.canvasPoint.y);
+                wmobj.setState("NEW");
+                wmobj.setId(genGalacticId("Star"));
+                wmobj.setStarDataType($(myThis).attr('id').substr(7));
+                wmobj.linkDataGalaxy(webmem.DataGalaxy.getFirstObject());
 
-              let wmobj = new webmem.Star();
-              wmobj.setLocation(chart.canvasPoint.x + "," + chart.canvasPoint.y);
-              wmobj.setState("NEW");
-              wmobj.setId(genGalacticId("Star"));
-              wmobj.setStarDataType($(this).attr('id').substr(7));
-              wmobj.linkDataGalaxy(webmem.DataGalaxy.getFirstObject());
-
-              webappos.webcall_and_wait("configureGalaxyComponent", {
-                frameLocation: "modalpopup(" + chart.clickPoint.x + "," + chart.clickPoint.y + ")",
-                star: [{
-                  id: wmobj.id
-                }]
-              });
-              return true;
-            }
-          }
-
-
-          if ($(this).attr('id').substr(0, 14) == "NewStellarWind") {
-            if ($(this).children().length == 0) {
-
-              var className = $(this).attr('id').substr(14);
-              webappos.webcall("putGalacticTypeIntoMetamodel", className).then(()=>{
-                let new_id = genGalacticId("StellarWind");
-                let wStWind = new webmem[className];
-                wStWind.setLocation(chart.canvasPoint.x + "," + chart.canvasPoint.y);
-                wStWind.setId(new_id);
-                wStWind.setState("NEW");
-                wStWind.setName(new_id);
-
-                for (var i = 0; i < nodes.length; i++) {
-                  wStWind.linkSource(findGalaxyComponentById(nodes[i]), "Star");
-                }
-
-                let wTargetStar = new webmem.Star();
-                wTargetStar.setId(genGalacticId("Star"));
-                wTargetStar.setState("CONFIGURATION_ERROR");
-                wTargetStar.setName("Target Star for " + new_id);
-
-                wStWind.linkTarget(wTargetStar);
-
-                webappos.webcall("configureGalaxyComponent", {
+                webappos.webcall_and_wait("configureGalaxyComponent", {
                   frameLocation: "modalpopup(" + chart.clickPoint.x + "," + chart.clickPoint.y + ")",
-                  stellarWind: [{
-                    id: new_id
+                  star: [{
+                    id: wmobj.id
                   }]
                 });
                 return true;
-              });
+              }
             }
-          }
 
 
-          if ($(this).attr('id').substr(0, 9) == "NewPlanet") {
-            if ($(this).children().length == 0) {
+            if ($(myThis).attr('id').substr(0, 14) == "NewStellarWind") {
+              if ($(myThis).children().length == 0) {
 
-              var className = $(this).attr('id').substr(9);
-              webappos.webcall("putGalacticTypeIntoMetamodel", className).then(()=>{
-
-                var new_id = genGalacticId("Planet");
-                let wmobj = new webmem[className];
-                wmobj.setLocation(chart.canvasPoint.x + "," + chart.canvasPoint.y);
-                wmobj.setId(new_id);
-                wmobj.setState("NEW");
-                wmobj.setName(new_id + ": " + className);
-                wmobj.linkStar(findGalaxyComponentById(nodes[0], "Star")); // source star
-
-                webappos.webcall("configureGalaxyComponent", {
-                  frameLocation: "modalpopup(" + chart.clickPoint.x + "," + chart.clickPoint.y + ")",
-                  planet: [{
-                    id: new_id
-                  }]
-                });
-
-              });
-              return true;
-            }
-          }
-
-          if (($(this).attr('id').substr(0, 14) == "NewCrossFilter") ||
-            ($(this).attr('id').substr(0, 19) == "ExistingCrossFilter")) {
-            if ($(this).children().length == 0) {
-
-              var creatingNew = $(this).attr('id').substr(0, 14) == "NewCrossFilter";
-
-
-              if (creatingNew) {
-
-                var className = $(this).attr('id').substr(14);
+                var className = $(myThis).attr('id').substr(14);
                 webappos.webcall("putGalacticTypeIntoMetamodel", className).then(()=>{
+                  let new_id = genGalacticId("StellarWind");
+                  let wStWind = new webmem[className];
+                  wStWind.setLocation("NEW:"+(chart.canvasPoint.x+100) + "," + chart.canvasPoint.y);
+                  wStWind.setId(new_id);
+                  wStWind.setState("NEW");
+                  wStWind.setName(new_id);
 
-
-                  var new_id = genGalacticId("CrossFilter");
-                  var wCrossFilter = new webmem[className]();
-                  wCrossFilter.setLocation(chart.canvasPoint.x + "," + chart.canvasPoint.y);
-                  wCrossFilter.setId(new_id);
-                  wCrossFilter.setState("NEW");
-                  wCrossFilter.setName(new_id + ": " + className);
-                  var wobj = findGalaxyComponentById(nodes[0]);
-                  if (wobj) {
-                    if (wobj.isKindOf("Planet"))
-                      wCrossFilter.linkPlanet(wobj);
-                    else
-                    if (wobj.isKindOf("StellarWind"))
-                      wCrossFilter.linkStellarWind(wobj);
+                  for (var i = 0; i < nodes.length; i++) {
+                    wStWind.linkSource(findGalaxyComponentById(nodes[i]), "Star");
                   }
+
+                  let wTargetStar = new webmem.Star();
+                  wTargetStar.setLocation("NEW:"+(chart.canvasPoint.x+200) + "," + chart.canvasPoint.y);
+                  wTargetStar.setId(genGalacticId("Star"));
+                  wTargetStar.setState("CONFIGURATION_ERROR");
+                  wTargetStar.setName("Target Star for " + new_id);
+
+                  wStWind.linkTarget(wTargetStar);
 
                   webappos.webcall("configureGalaxyComponent", {
                     frameLocation: "modalpopup(" + chart.clickPoint.x + "," + chart.clickPoint.y + ")",
-                    crossFilter: [{
+                    stellarWind: [{
                       id: new_id
                     }]
                   });
-                });
-
-              } else {
-                var filterId = $(this).attr('id').substr(19); // ExistingCrossFilter
-                // attaching existing...
-                var filter = findGalaxyComponentById(filterId, "CrossFilter");
-
-                if (!filter)
                   return true;
-
-                var wobj = findGalaxyComponentById(nodes[0]);
-                if (wobj) {
-                  if (wobj.isKindOf("Planet"))
-                    filter.linkPlanet(wobj);
-                  else
-                  if (wobj.isKindOf("StellarWind"))
-                    filter.linkStellarWind(wobj);
-                }
-
-                let cmd = new webmem.RefreshGalaxyCommand();
-                cmd.setModifiedComponent(filter);
-                cmd.setDataGalaxy(webmem.DataGalaxy.getFirstObject());
-                webmem.submit(cmd);
-
+                });
               }
+            }
+
+
+            if ($(myThis).attr('id').substr(0, 9) == "NewPlanet") {
+              if ($(myThis).children().length == 0) {
+
+                var className = $(myThis).attr('id').substr(9);
+                webappos.webcall("putGalacticTypeIntoMetamodel", className).then(()=>{
+
+                  var new_id = genGalacticId("Planet");
+                  let wmobj = new webmem[className];
+                  wmobj.setLocation("NEW:"+(chart.canvasPoint.x+100) + "," + chart.canvasPoint.y);
+                  wmobj.setId(new_id);
+                  wmobj.setState("NEW");
+                  wmobj.setName(new_id + ": " + className);
+                  wmobj.linkStar(findGalaxyComponentById(nodes[0], "Star")); // source star
+
+                  webappos.webcall("configureGalaxyComponent", {
+                    frameLocation: "modalpopup(" + chart.clickPoint.x + "," + chart.clickPoint.y + ")",
+                    planet: [{
+                      id: new_id
+                    }]
+                  });
+
+                });
+                return true;
+              }
+            }
+
+            if (($(myThis).attr('id').substr(0, 14) == "NewCrossFilter") ||
+              ($(myThis).attr('id').substr(0, 19) == "ExistingCrossFilter")) {
+              if ($(myThis).children().length == 0) {
+
+                var creatingNew = $(myThis).attr('id').substr(0, 14) == "NewCrossFilter";
+
+
+                if (creatingNew) {
+
+                  var className = $(myThis).attr('id').substr(14);
+                  webappos.webcall("putGalacticTypeIntoMetamodel", className).then(()=>{
+
+
+                    var new_id = genGalacticId("CrossFilter");
+                    var wCrossFilter = new webmem[className]();
+                    wCrossFilter.setLocation("NEW:"+(chart.canvasPoint.x+100) + "," + chart.canvasPoint.y);
+                    wCrossFilter.setId(new_id);
+                    wCrossFilter.setState("NEW");
+                    wCrossFilter.setName(new_id + ": " + className);
+                    var wobj = findGalaxyComponentById(nodes[0]);
+                    if (wobj) {
+                      if (wobj.isKindOf("Planet"))
+                        wCrossFilter.linkPlanet(wobj);
+                      else
+                      if (wobj.isKindOf("StellarWind"))
+                        wCrossFilter.linkStellarWind(wobj);
+                    }
+
+                    webappos.webcall("configureGalaxyComponent", {
+                      frameLocation: "modalpopup(" + chart.clickPoint.x + "," + chart.clickPoint.y + ")",
+                      crossFilter: [{
+                        id: new_id
+                      }]
+                    });
+                  });
+
+                } else {
+                  var filterId = $(myThis).attr('id').substr(19); // ExistingCrossFilter
+                  // attaching existing...
+                  var filter = findGalaxyComponentById(filterId, "CrossFilter");
+
+                  if (!filter)
+                    return true;
+
+                  var wobj = findGalaxyComponentById(nodes[0]);
+                  if (wobj) {
+                    if (wobj.isKindOf("Planet"))
+                      filter.linkPlanet(wobj);
+                    else
+                    if (wobj.isKindOf("StellarWind"))
+                      filter.linkStellarWind(wobj);
+                  }
+
+                  let cmd = new webmem.RefreshGalaxyCommand();
+                  cmd.setModifiedComponent(filter);
+                  cmd.setDataGalaxy(webmem.DataGalaxy.getFirstObject());
+                  webmem.submit(cmd);
+
+                }
+                return true;
+              }
+            }
+
+
+            if ($(myThis).hasClass('disabled')) {
+              if (confirm('These options are disabled. Do you want to enable these options?'))
+                $(myThis).removeClass('disabled');
+
+              $(context).animate({
+                borderWidth: '0',
+                paddingLeft: '0',
+                paddingTop: '0',
+                paddingBottom: '0',
+                paddingRight: '0'
+              }, 200);
               return true;
             }
-          }
 
+            switch ($(myThis).attr('id')) {
+              case 'configure':
+                if (whatSelected == "Star") {
+                  for (var i = 0; i < nodes.length; i++) {
+                    webappos.webcall_and_wait("configureGalaxyComponent", {
+                      frameLocation: "popup(" + (chart.clickPoint.x + (i * 10)) + "," + (chart.clickPoint
+                        .y + (i *
+                          10)) + ")",
+                      star: {
+                        id: nodes[i]
+                      }
+                    });
+                  }
+                } else
+                if (whatSelected == "StellarWind") {
+                  webappos.webcall_and_wait("configureGalaxyComponent", {
+                    frameLocation: "popup(" + chart.clickPoint.x + "," + chart.clickPoint.y + ")",
+                    stellarWind: {
+                      id: nodes[0]
+                    }
+                  });
+                  return true;
+                } else
+                if (whatSelected == "Planet") {
+                  webappos.webcall_and_wait("configureGalaxyComponent", {
+                    frameLocation: "popup(" + chart.clickPoint.x + "," + chart.clickPoint.y + ")",
+                    planet: {
+                      id: nodes[0]
+                    }
+                  });
+                  return true;
+                } else
+                if (whatSelected == "CrossFilter") {
+                  webappos.webcall_and_wait("configureGalaxyComponent", {
+                    frameLocation: "popup(" + chart.clickPoint.x + "," + chart.clickPoint.y + ")",
+                    crossFilter: {
+                      id: nodes[0]
+                    }
+                  });
+                  return true;
+                }
+                break;
 
-          if ($(this).hasClass('disabled')) {
-            if (confirm('These options are disabled. Do you want to enable these options?'))
-              $(this).removeClass('disabled');
+              case 'drop_star_configuration':
+                if (whatSelected == "Star") {
 
+                  var ids = [];
+                  for (var i = 0; i < nodes.length; i++)
+                    ids[i] = nodes[i];
+                  var runs = webappos.webcall_and_wait("getRunsForCleanup", ids);
+                  runGalaxy(runs, function () {
+                    for (var i = 0; i < ids.length; i++) {
+
+                      var star = findGalaxyComponentById(ids[i], "Star");
+                      if (!star)
+                        continue;
+
+                      var arr = star.getStarData();
+                      for (var i = 0; i < arr.length; i++) {
+                        arr[i].delete();
+                      }
+
+                      if (star.starDataType && (star.starDataType.indexOf(",") == -1)) {
+                        var answer = webappos.webcall_and_wait("isFinalGalacticType", star.starDataType);
+                        if (answer.result)
+                          star.setState("CONFIGURATION_ERROR");
+                        else
+                          star.setState("CONFIGURATION_UNKNOWN");
+                      } else
+                        star.setState("CONFIGURATION_UNKNOWN");
+
+                      star.setName("");
+
+                      let cmd = new webmem.RefreshGalaxyCommand();
+                      cmd.setDataGalaxy(webmem.DataGalaxy.getFirstObject());
+                      webmem.submit(cmd);
+                    }
+                  }); // runGalaxy
+                }
+                break;
+
+              case 'cleanup_star':
+                if (whatSelected == "Star") {
+
+                  var ids = [];
+                  for (var i = 0; i < nodes.length; i++)
+                    ids[i] = nodes[i];
+                  var runs = webappos.webcall_and_wait("getRunsForCleanup", ids);
+                  runGalaxy(runs);
+                }
+                break;
+
+              case 'new_star_multi': {
+                var star = new webmem.Star();
+                star.setLocation("NEW:"+(chart.canvasPoint.x+100) + "," + chart.canvasPoint.y);
+                star.setState("NEW");
+                star.setId(genGalacticId("Star"));
+                // do not specify starDataType; that means that this is a multi-typed star
+
+                webappos.webcall_and_wait("configureGalaxyComponent", {
+                  frameLocation: "modalpopup(" + chart.clickPoint.x + "," + chart.clickPoint.y + ")",
+                  star: [{
+                    id: star.id
+                  }]
+                });
+                return true;
+              }
+              break;
+
+            case 'emit':
+              if (whatSelected == "StellarWind") {
+                var wind = findGalaxyComponentById(nodes[0], "StellarWind");
+                if (!wind)
+                  return true;
+
+                var windRuns = webappos.webcall_and_wait("getRunsForGalaxyComponent", wind.id);
+                runGalaxy(windRuns);
+
+                return true;
+              }
+              break;
+
+            case 'visualize':
+              if (whatSelected == "Planet") {
+                var planet = findGalaxyComponentById(nodes[0], "Planet");
+                if (!planet)
+                  return true;
+
+                var planetRuns = webappos.webcall_and_wait("getRunsForGalaxyComponent", planet.id);
+                if (planetRuns && (planetRuns.length > 0) && (planetRuns[planetRuns.length - 1].action ==
+                    "VisualizePlanet")) {
+                  planetRuns[planetRuns.length - 1].frameLocation = "popup(" + chart.clickPoint.x + "," + chart
+                    .clickPoint.y + ")";
+                }
+
+                runGalaxy(planetRuns);
+
+                return true;
+              }
+              break;
+
+            case 'delete':
+              if (nodes.length > 0) {
+                var components = [];
+                for (var i = 0; i < nodes.length; i++) {
+                  components[i] = nodes[i];
+                }
+
+                var runs = webappos.webcall_and_wait("getRunsForCleanup", components);
+                runGalaxy(runs, function () {
+                  webappos.webcall_and_wait("deleteGalaxyComponents", components); // will call refresh
+                });
+
+                return true;
+              }
+              break;
+
+            case 'deploy':
+              var frame = new webmem.Frame();
+              frame.setCaption("Deploy the galaxy to end users");
+              //frame.setLocation("modalpopup");
+              frame.setLocation("modalpopup[550x50%]");
+
+              frame.setOnCloseFrameRequestedEvent(
+                "staticjava:lv.lumii.datagalaxies.DataGalaxiesApp#onCloseFrameRequestedEvent");
+              frame.setContentURI("html:galactictypes/deployToEndUsers.html?frameReference=" + frame.reference);
+
+              var cmd = new webmem.AttachFrameCommand();
+              cmd.linkFrame(frame);
+              webmem.submit(cmd);
+
+              return true;
+              break;
+
+            default:
+              return false;
+            }
             $(context).animate({
               borderWidth: '0',
               paddingLeft: '0',
@@ -303,193 +492,7 @@
               paddingBottom: '0',
               paddingRight: '0'
             }, 200);
-            return true;
-          }
-
-          switch ($(this).attr('id')) {
-            case 'configure':
-              if (whatSelected == "Star") {
-                for (var i = 0; i < nodes.length; i++) {
-                  webappos.webcall_and_wait("configureGalaxyComponent", {
-                    frameLocation: "popup(" + (chart.clickPoint.x + (i * 10)) + "," + (chart.clickPoint
-                      .y + (i *
-                        10)) + ")",
-                    star: {
-                      id: nodes[i]
-                    }
-                  });
-                }
-              } else
-              if (whatSelected == "StellarWind") {
-                webappos.webcall_and_wait("configureGalaxyComponent", {
-                  frameLocation: "popup(" + chart.clickPoint.x + "," + chart.clickPoint.y + ")",
-                  stellarWind: {
-                    id: nodes[0]
-                  }
-                });
-                return true;
-              } else
-              if (whatSelected == "Planet") {
-                webappos.webcall_and_wait("configureGalaxyComponent", {
-                  frameLocation: "popup(" + chart.clickPoint.x + "," + chart.clickPoint.y + ")",
-                  planet: {
-                    id: nodes[0]
-                  }
-                });
-                return true;
-              } else
-              if (whatSelected == "CrossFilter") {
-                webappos.webcall_and_wait("configureGalaxyComponent", {
-                  frameLocation: "popup(" + chart.clickPoint.x + "," + chart.clickPoint.y + ")",
-                  crossFilter: {
-                    id: nodes[0]
-                  }
-                });
-                return true;
-              }
-              break;
-
-            case 'drop_star_configuration':
-              if (whatSelected == "Star") {
-
-                var ids = [];
-                for (var i = 0; i < nodes.length; i++)
-                  ids[i] = nodes[i];
-                var runs = webappos.webcall_and_wait("getRunsForCleanup", ids);
-                runGalaxy(runs, function () {
-                  for (var i = 0; i < ids.length; i++) {
-
-                    var star = findGalaxyComponentById(ids[i], "Star");
-                    if (!star)
-                      continue;
-
-                    var arr = star.getStarData();
-                    for (var i = 0; i < arr.length; i++) {
-                      arr[i].delete();
-                    }
-
-                    if (star.starDataType && (star.starDataType.indexOf(",") == -1)) {
-                      var answer = webappos.webcall_and_wait("isFinalGalacticType", star.starDataType);
-                      if (answer.result)
-                        star.setState("CONFIGURATION_ERROR");
-                      else
-                        star.setState("CONFIGURATION_UNKNOWN");
-                    } else
-                      star.setState("CONFIGURATION_UNKNOWN");
-
-                    star.setName("");
-
-                    let cmd = new webmem.RefreshGalaxyCommand();
-                    cmd.setDataGalaxy(webmem.DataGalaxy.getFirstObject());
-                    webmem.submit(cmd);
-                  }
-                }); // runGalaxy
-              }
-              break;
-
-            case 'cleanup_star':
-              if (whatSelected == "Star") {
-
-                var ids = [];
-                for (var i = 0; i < nodes.length; i++)
-                  ids[i] = nodes[i];
-                var runs = webappos.webcall_and_wait("getRunsForCleanup", ids);
-                runGalaxy(runs);
-              }
-              break;
-
-            case 'new_star_multi': {
-              var star = new webmem.Star();
-              star.setLocation(chart.canvasPoint.x + "," + chart.canvasPoint.y);
-              star.setState("NEW");
-              star.setId(genGalacticId("Star"));
-              // do not specify starDataType; that means that this is a multi-typed star
-
-              webappos.webcall_and_wait("configureGalaxyComponent", {
-                frameLocation: "modalpopup(" + chart.clickPoint.x + "," + chart.clickPoint.y + ")",
-                star: [{
-                  id: star.id
-                }]
-              });
-              return true;
-            }
-            break;
-
-          case 'emit':
-            if (whatSelected == "StellarWind") {
-              var wind = findGalaxyComponentById(nodes[0], "StellarWind");
-              if (!wind)
-                return true;
-
-              var windRuns = webappos.webcall_and_wait("getRunsForGalaxyComponent", wind.id);
-              runGalaxy(windRuns);
-
-              return true;
-            }
-            break;
-
-          case 'visualize':
-            if (whatSelected == "Planet") {
-              var planet = findGalaxyComponentById(nodes[0], "Planet");
-              if (!planet)
-                return true;
-
-              var planetRuns = webappos.webcall_and_wait("getRunsForGalaxyComponent", planet.id);
-              if (planetRuns && (planetRuns.length > 0) && (planetRuns[planetRuns.length - 1].action ==
-                  "VisualizePlanet")) {
-                planetRuns[planetRuns.length - 1].frameLocation = "popup(" + chart.clickPoint.x + "," + chart
-                  .clickPoint.y + ")";
-              }
-
-              runGalaxy(planetRuns);
-
-              return true;
-            }
-            break;
-
-          case 'delete':
-            if (nodes.length > 0) {
-              var components = [];
-              for (var i = 0; i < nodes.length; i++) {
-                components[i] = nodes[i];
-              }
-
-              var runs = webappos.webcall_and_wait("getRunsForCleanup", components);
-              runGalaxy(runs, function () {
-                webappos.webcall_and_wait("deleteGalaxyComponents", components); // will call refresh
-              });
-
-              return true;
-            }
-            break;
-
-          case 'deploy':
-            var frame = new webmem.Frame();
-            frame.setCaption("Deploy the galaxy to end users");
-            //frame.setLocation("modalpopup");
-            frame.setLocation("modalpopup[550x50%]");
-
-            frame.setOnCloseFrameRequestedEvent(
-              "staticjava:lv.lumii.datagalaxies.DataGalaxiesApp#onCloseFrameRequestedEvent");
-            frame.setContentURI("html:galactictypes/deployToEndUsers.html?frameReference=" + frame.reference);
-
-            var cmd = new webmem.AttachFrameCommand();
-            cmd.linkFrame(frame);
-            webmem.submit(cmd);
-
-            return true;
-            break;
-
-          default:
-            return false;
-          }
-          $(context).animate({
-            borderWidth: '0',
-            paddingLeft: '0',
-            paddingTop: '0',
-            paddingBottom: '0',
-            paddingRight: '0'
-          }, 200);
+          }, 0); // setTimeout
         },
         onHover: function (e, context) {
           if ($(this).hasClass('disabled')) return false;
@@ -1064,6 +1067,15 @@
       }
     }
 
+/**
+
+jsonObject is {
+  frameReference: <webmem reference>, // technical, used by webAppOS to find this frame containing GalaxyEngine.html
+  tooltips: {<map with tooltips>},
+  nodes: [<an array in the vis.js syntax>],
+  edges: [<an array in the vis.js syntax>],
+}
+*/
 
     function executeEditGalaxyCommand(jsonObject) {
       tooltips = jsonObject.tooltips;
@@ -1400,21 +1412,92 @@
 
     } // executeEditGalaxyCommand
 
+/**
+jsonObject can be {
+  frameReference: <webmem reference>, // technical, used by webAppOS to find this frame containing GalaxyEngine.html
+  modifiedComponentReference: <webmem reference>,
+  tooltips: {<map with tooltips>},
+  nodes: [<an array in the vis.js syntax>],
+  edges: [<an array in the vis.js syntax>],
+}
+or {
+  frameReference: <webmem reference>, // technical, used by webAppOS to find this frame containing GalaxyEngine.html
+  timeout: <milliseconds>,
+  modifiedComponentReference: <webmem reference>
+}
+*/
     function executeRefreshGalaxyCommand(jsonObject) {
-      tooltips = jsonObject.tooltips;
 
-      console.log("REFRESH",jsonObject);
       whatSelected = null;
 
+      chart.unselectAll();
+      chart.lastAllStars = [];
+
+      if (jsonObject.timeout) {
+        console.log("REFRESH t/o",jsonObject);
+        setTimeout(function(){
+          let cmd = new webmem.RefreshGalaxyCommand();
+          if (jsonObject.modifiedComponentReference) {
+            let obj = webmem[jsonObject.modifiedComponentReference];
+            if (obj) {
+              obj.setState("RUN_ERROR");
+              obj.setStateMessage("Timed out");
+              cmd.setModifiedComponent(obj);
+            }
+          }
+          cmd.setDataGalaxy(webmem.DataGalaxy.getFirstObject());
+          webmem.submit(cmd);
+        }, jsonObject.timeout);
+        return;
+      }
+
+      console.log("REFRESH",jsonObject);
+      tooltips = jsonObject.tooltips;
       require([
         "graphvis/vis-network.min.js",
         "dojo/domReady!"
       ], function (vis) {
 
         // deleting & adding nodes & edges...
+        //console.log("IDS",chart.data.nodes.getIds());
         let existingNodes = {};
-        for (let i = 0; i < jsonObject.nodes.length; i++)
+        let floatingNodes = {};
+        for (let i = 0; i < jsonObject.nodes.length; i++) {
           existingNodes[jsonObject.nodes[i].id] = true;
+          if (jsonObject.nodes[i].fixed && (!jsonObject.nodes[i].fixed.x || !jsonObject.nodes[i].fixed.y)) {
+            console.log("FLT",jsonObject.nodes[i]);
+            floatingNodes[jsonObject.nodes[i].id] = true;
+          }
+        }
+
+        if (!$.isEmptyObject(floatingNodes)) {
+          setTimeout(function() {            
+
+            chart.data.nodes.get({
+              filter: function (item) {
+                if (floatingNodes[item.id]) {
+                  let nodeId = item.id;
+                  var xy = chart.getPositions(nodeId)[nodeId];
+                  let gc = findGalaxyComponentById(nodeId);
+                  if (gc) {
+                    gc.setLocation(xy.x + "," + xy.y);
+                  }
+                  chart.data.nodes.update({
+                    id: nodeId,
+                    fixed: {
+                      x: true,
+                      y: true
+                    }
+                  });
+
+                }
+                return false;
+              }
+            });
+
+          }, 3000);
+        }
+
         let existingEdges = {};
         for (let i = 0; i < jsonObject.edges.length; i++)
           existingEdges[jsonObject.edges[i].id] = true;
@@ -1440,18 +1523,15 @@
         chart.fit();
         updateBackgroundAndFont();
 
-        if (jsonObject.modifiedComponent && jsonObject.modifiedComponent.length) {
+        if (jsonObject.modifiedComponentReference) {
           // a modified component is specified; trying to cleanup/run the galaxy...
-          var c = jsonObject.modifiedComponent[0];
-
+          var c = webmem[jsonObject.modifiedComponentReference];
 
           if (running()) {
             if (c.id == runningId())
-              runNext(); // configuration during run
+              runNext(); 
+            // ignore if c.id != runningId; obviously, some other refresh has already moved runs further...
           } else {
-            if (runs != null) {
-              runNext(); // this refresh is for finishing the last run...
-            } else {
               if (webappos.js_util.starts_with(c.id, "CrossFilter")) {
                 // Cross-filter changed. We need to re-run the components affected by that filter.
                 // getting all visible planets...
@@ -1515,27 +1595,19 @@
                   runGalaxy(newRuns, fwait);
                 }
               } else {
-                // not a cross filter...
+                // else: not a cross filter...
                 var newRuns = webappos.webcall_and_wait("getRunsForCleanup", JSON.stringify([">" + c.id]));
                 runGalaxy(newRuns, function() {
                   let cmd = new webmem.RefreshGalaxyCommand();
                   cmd.setDataGalaxy(webmem.DataGalaxy.getFirstObject());
                   webmem.submit(cmd);
                 });
-              }
-            }
+              }            
           }
 
         } else {
           // modified component not specified...
-
-          if (!running() && (runs != null)) {
-            runNext(); // finishing runs (planets do not specify components, when refreshing)
-          }
-          if (running()) {
-            if (runs[runIndex - 1].action == "VisualizePlanet")
-              runNext();
-          }
+          runNext(); // perhaps, we need to finalize runs...
         }
 
       });
@@ -1548,27 +1620,33 @@
 
 
     var runs = null;
-    var runIndex = 0;
+    var runIndex = 0; // the next run index to be run (current is runIndex-1)
     var fAfterRuns = null;
     var standbyObject = null;
 
     function runningId() {
       if (!running())
         return null;
+      if (runIndex==0)
+        return null; // run -1 has the id null
       return runs[runIndex - 1].id;
     }
 
     function running() {
-      return (runs != null) && (runIndex < runs.length);
+      return (runs != null);
     }
 
     function runNext() {
-      if (running()) {
-        checkRunError(runningId());
-        runIndex++;
+      if (runs==null)
+        return; // not running
+ 
+      checkRunError(runningId());
+
+      if (runIndex < runs.length) { // can move forward
+        runIndex++; 
         let currentComponent = findGalaxyComponentById(runs[runIndex-1].id);
         webappos.webcall("runGalaxyComponentAsync", runs[runIndex - 1]).catch((json)=>{
-          console.log("ERROR_NEXT",currentComponent.id,json,currentComponent.state);
+          console.log("ERROR DURING RUN",currentComponent.id,json,currentComponent.state);
           let cmd = new webmem.RefreshGalaxyCommand();
           let state = currentComponent.getState()+"";          
           if (state.indexOf("ERROR")<0) {
@@ -1582,9 +1660,7 @@
           cmd.setDataGalaxy(webmem.DataGalaxy.getFirstObject());
           webmem.submit(cmd);
         });
-      } else {
-        if ((runs != null) && (runs.length > 0))
-          checkRunError(runs[runs.length - 1].id);
+      } else { // all done; finalizing...
         runs = null;
         if (fAfterRuns) {
           var f = fAfterRuns;
@@ -1684,7 +1760,7 @@
 
 
       clearRunErrors();
-      if (!newRuns) {
+      if (!newRuns || newRuns.length==0) {
         runs = null;
         runIndex = 0;
         if (f) f();
@@ -1693,7 +1769,7 @@
 
       runs = newRuns;
       runIndex = 0;
-      if (runs.length > 0) {
+      fAfterRuns = f;
 
         require(["dojox/widget/Standby", "dojo/domReady!"],
           function (Standby) {
@@ -1707,27 +1783,8 @@
             standbyObject.show();
           });
 
-        fAfterRuns = f;
-        runIndex = 1; // move to the next run
-        let currentComponent = findGalaxyComponentById(runs[0].id);
-        webappos.webcall("runGalaxyComponentAsync", runs[0]).catch((json)=>{
-          console.log("ERROR_FIRST",currentComponent.id,json);
-          let cmd = new webmem.RefreshGalaxyCommand();
-          let state = currentComponent.getState()+"";          
-          if (state.indexOf("ERROR")<0) {
-            currentComponent.setState("RUN_ERROR");
-            if (json.error)
-              currentComponent.setStateMessage(json.error);
-            else
-              currentComponent.setStateMessage("webcall error during run");
-          }
-          cmd.setModifiedComponent(currentComponent);
-          cmd.setDataGalaxy(webmem.DataGalaxy.getFirstObject());
-          webmem.submit(cmd);
-        });
-      } else {
-        if (f) f();
-      }
+      runNext();
+
     }
 
 

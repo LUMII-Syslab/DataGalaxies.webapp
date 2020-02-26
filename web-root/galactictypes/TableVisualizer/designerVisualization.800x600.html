@@ -29,7 +29,7 @@
 
   <script>
     function load(planet) {
-      var csv = webappos.webcall_and_wait("webappos.getFileContentAsUTF8String", planet.star[0].starData[0].fileName).content;
+      var csv = webappos.webcall_and_wait("webappos.getFileContentFromCurrentProjectAsUTF8String", planet.star[0].starData[0].fileName).content;
       var data = Papa.parse(csv);
 
       if (data.data.length == 0)

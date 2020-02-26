@@ -79,6 +79,7 @@
     webappos.webcall_and_wait("storeObjects", [galaxyComponent]);
 
     let cmd = new webmem.RefreshGalaxyCommand();
+    cmd.setModifiedComponent(webmem[galaxyComponent.reference]);
     cmd.setDataGalaxy(webmem.DataGalaxy.getFirstObject());
     webmem.submit(cmd);
   }
@@ -137,8 +138,6 @@
 
   });
 
-  var frameCopy = null; // for finalize
-
   function onTab() {
     var oldFrameReference = GetURLParameter('frameReference');
     var oldFrame = webmem[oldFrameReference];
@@ -165,6 +164,12 @@
     webmem.submit(ev);
 
 
+    frameCopy.setGalaxyComponent(webmem[galaxyComponent.reference]);
+    let cmd = new webmem.AttachFrameCommand();
+    cmd.linkFrame(frameCopy);
+    webmem.submit(cmd);
+    frameCopy = null;
+
   }
 
   function onClose() {
@@ -174,18 +179,6 @@
     webmem.submit(ev);
 
   }
-
-  function finalize() {
-    if (frameCopy) {
-console.log("FINALIZE",frameCopy);
-      frameCopy.setGalaxyComponent(webmem[galaxyComponent.reference]); //!!!
-      let cmd = new webmem.AttachFrameCommand();
-      cmd.linkFrame(frameCopy);
-      webmem.submit(cmd);
-      frameCopy = null;
-    }
-  }
-
 
   function bodyResized() {
     configFrameDiv.style.height = document.body.parentElement.clientHeight - footer.offsetHeight + "px";

@@ -12,7 +12,7 @@ Choose .json file:
 
 <div id="json_name">
 Enter target .json file name:
-<input id="ftext" type="text"/>
+<input id="ftext" type="text" value="data.json"/>
 <br>
 </div>
 
@@ -24,7 +24,8 @@ function load(star)
 {
   if (star.producer) {
     json_choose.parentNode.removeChild(json_choose);
-    ftext.value = star.starData[0].fileName;
+    if (star.starData && star.starData[0] && star.starData[0].fileName)
+      ftext.value = star.starData[0].fileName;
   }
   else {
     json_name.parentNode.removeChild(json_name);

@@ -10,7 +10,7 @@
  <div id="chartContainer"></div> 
  <script type="text/javascript">
   function load(planet) {
-   var s = webappos.webcall_and_wait("webappos.getFileContentAsUTF8String", planet.star[0].starData[0].fileName).content;
+   var s = webappos.webcall_and_wait("webappos.getFileContentFromCurrentProjectAsUTF8String", planet.star[0].starData[0].fileName).content;
    alert(s);
    t = new TimeChart({
         container: document.getElementById("chartContainer"),

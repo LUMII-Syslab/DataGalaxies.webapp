@@ -47,7 +47,7 @@
           webmem[f.reference].setToDate(f.toDate);
 
           let cmd = new webmem.RefreshGalaxyCommand();
-          cmd.setModifiedComponent(webmem[reference:f.reference]);
+          cmd.setModifiedComponent(webmem[f.reference]);
           cmd.setDataGalaxy(webmem.DataGalaxy.getFirstObject());
           webmem.submit(cmd);
 
@@ -68,13 +68,14 @@ try{
         // no filters, or error
       }
 
-      var s = webappos.webcall_and_wait("webappos.getFileContentAsUTF8String", planet.star[0].starData[0].fileName).content;
+      var s = webappos.webcall_and_wait("webappos.getFileContentFromCurrentProjectAsUTF8String", planet.star[0].starData[0].fileName).content;
       var json;
       try {
         json = JSON.parse(s);
       }
       catch(tt) {
-        alert("JSON parse error "+t);
+console.log(s);
+        alert("JSON parse error "+tt);
       }
       var mydata = {
 //        "dataLimitFrom":1279408157,

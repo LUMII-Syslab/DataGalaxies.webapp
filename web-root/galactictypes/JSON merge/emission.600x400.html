@@ -26,6 +26,7 @@ function getId(json, idAttributeNames)
 function recurse(json, childParentMap, childAttrMap, idObjectMap, idAttributeNames, attributeNamesAndAggregations, countAttributes)
 {
   var id = getId(json, idAttributeNames);
+console.log("recurse "+id);
   if (id == null) {
     // ignore this object, but check the children...
     for (var attr in json) {
@@ -250,7 +251,7 @@ function emitAsync(_stWind, _fAfter)
   NNN.value = ""+stellarWind.source.length;
 
   for (var i in stellarWind.source) {
-    var sFile = tda.fileContentAsUTF8String(stellarWind.source[i].starData[0].fileName);
+    var sFile = webappos.webcall_and_wait("webappos.getFileContentFromCurrentProjectAsUTF8String",stellarWind.source[i].starData[0].fileName).content;
     var src;
     try {
       src = JSON.parse(sFile);
@@ -263,6 +264,7 @@ function emitAsync(_stWind, _fAfter)
       fAfter();
       return;
     }
+
 
     if ($.isArray(src)) {
       for (var j in src) {
@@ -288,18 +290,30 @@ function emitAsync(_stWind, _fAfter)
     }
   }
 
-  var result = tda.fileUploadFromString(stellarWind.target[0].starData[0].fileName, JSON.stringify(resultJson,null,2));
-//  console.log("file upload "+stellarWind.target[0].starData[0].fileName+" res="+result);
+  var result = webappos.webcall_and_wait("webappos.uploadFileToCurrentProject", {
+    fileName: stellarWind.target[0].starData[0].fileName, 
+    content: JSON.stringify(resultJson,null,2)
+  }).result;
+
 
   if (result) {
     stellarWind.state = 'RUN_OK';
     stellarWind.target[0].state = "RUN_OK";
+
+webmem[stellarWind.reference].setState("RUN_OK");
+webmem[stellarWind.reference].getTarget()[0].setState("RUN_OK");
   }
   else {
     stellarWind.state = 'RUN_ERROR';
     stellarWind.target[0].state = "CONFIGURATION_OK";
   }
   finalized = true;
+
+    let cmd = new webmem.RefreshGalaxyCommand();
+    cmd.setModifiedComponent(webmem[stellarWind.reference]);
+    cmd.setDataGalaxy(webmem.DataGalaxy.getFirstObject());
+    webmem.submit(cmd);
+
   fAfter();
 
 }
@@ -313,11 +327,11 @@ function finalize()
     return;
   finalized = true;
 
-  if (stellarWind && (stellarWind.state=="RUNNING")) {
+/*  if (stellarWind && (stellarWind.state=="RUNNING")) {
     stellarWind.state = "RUN_ERROR";
     stellarWind.stateMessage = "Run cancelled.";
-    tda.jsonsubmit("storeObjects", [stellarWind]);
-  }
+    webappos.webcall_and_wait("storeObjects", [stellarWind]);
+  }*/
 
   if (fAfter)
     fAfter();
