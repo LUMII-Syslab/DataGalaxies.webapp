@@ -859,7 +859,6 @@ public class GalaxyEngine_webcalls {
 						
 			seed.actionName = "continueRefreshGalaxyCommand";
 			
-			System.out.println(retVal);
 			seed.callingConventions = WebCaller.CallingConventions.JSONCALL;
 			seed.jsonArgument = retVal.toString();
 			
@@ -2095,6 +2094,7 @@ public class GalaxyEngine_webcalls {
 		IWebMemory raapi = API.dataMemory.getWebMemory(project_id);
 		if (raapi==null)
 			return "{\"error\":\"Web memory is not present.\"}";
+		
 
 		lv.lumii.datagalaxies.eemm.EnvironmentEngineMetamodelFactory eeFactory = new lv.lumii.datagalaxies.eemm.EnvironmentEngineMetamodelFactory();
 		lv.lumii.datagalaxies.mm.GalaxyEngineMetamodelFactory geFactory = new lv.lumii.datagalaxies.mm.GalaxyEngineMetamodelFactory();
@@ -2145,7 +2145,7 @@ public class GalaxyEngine_webcalls {
 				return "{}";
 			}
 			
-			if ("RUN_OK".equals(c.getState()) /*&& !"FinalizeStar".equals(action)*/) {
+			if ("RUN_OK".equals(c.getState()) && !"FinalizeStar".equals(action)) {
 				GalaxyHelper.refreshGalaxy(geFactory, c);
 				return "{}"; // already run
 			}
@@ -2157,11 +2157,8 @@ public class GalaxyEngine_webcalls {
 			}
 			
 			if (!"CONFIGURATION_OK".equals(c.getState()) && !"RUNNING".equals(c.getState())) {
-				System.out.println(c.getState()+" "+c.getId());
-					
-				GalaxyHelper.refreshGalaxy(geFactory, c);
 				if ("CONFIGURATION_ERROR".equals(c.getState()))
-					return "{\"error\":\"Configuration error.\"}";
+					return "{\"error\":\"Configuration error.\"}"; // do not call refresh by ourselves, since the client-side will take care of that refresh when receiving the error
 				else
 					return "{\"error\":\"Run or configuration error.\"}";
 			}

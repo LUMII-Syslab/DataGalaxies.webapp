@@ -728,7 +728,6 @@ public class DataGalaxiesApp
 			if (rCls == 0)
 				return false;
 						
-			System.out.println("deleting file in cleanup");
 			long rCls2 = raapi.findClass("File");
 			if (rCls2 == 0) {
 				raapi.freeReference(rCls);

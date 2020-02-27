@@ -1435,23 +1435,24 @@ or {
 
       if (jsonObject.timeout) {
         console.log("REFRESH t/o",jsonObject);
-        setTimeout(function(){
-          let cmd = new webmem.RefreshGalaxyCommand();
+        setTimeout(function(jsonObject){
           if (jsonObject.modifiedComponentReference) {
             let obj = webmem[jsonObject.modifiedComponentReference];
-            if (obj) {
+            if (obj && (obj.getState()=="RUNNING")) {//variant: (obj.getState().indexOf("ERROR")<0))
               obj.setState("RUN_ERROR");
               obj.setStateMessage("Timed out");
-              cmd.setModifiedComponent(obj);
             }
+            let cmd = new webmem.RefreshGalaxyCommand();
+            if (obj)
+              cmd.setModifiedComponent(obj);
+            cmd.setDataGalaxy(webmem.DataGalaxy.getFirstObject());
+            webmem.submit(cmd);
           }
-          cmd.setDataGalaxy(webmem.DataGalaxy.getFirstObject());
-          webmem.submit(cmd);
-        }, jsonObject.timeout);
+        }, jsonObject.timeout, jsonObject);
         return;
       }
 
-      console.log("REFRESH",jsonObject);
+      console.log("REFRESH",jsonObject, webmem[jsonObject.modifiedComponentReference]);
       tooltips = jsonObject.tooltips;
       require([
         "graphvis/vis-network.min.js",
@@ -1526,12 +1527,15 @@ or {
         if (jsonObject.modifiedComponentReference) {
           // a modified component is specified; trying to cleanup/run the galaxy...
           var c = webmem[jsonObject.modifiedComponentReference];
-
           if (running()) {
             if (c.id == runningId())
               runNext(); 
             // ignore if c.id != runningId; obviously, some other refresh has already moved runs further...
           } else {
+/*            if (jsonObject.timeout) {
+              return;
+            }*/
+
               if (webappos.js_util.starts_with(c.id, "CrossFilter")) {
                 // Cross-filter changed. We need to re-run the components affected by that filter.
                 // getting all visible planets...
@@ -1544,7 +1548,6 @@ or {
                     visiblePlanets.push(webmem[r]);
                   }
                 }
-
                 // getting forward cleanup actions...
                 let newRuns = webappos.webcall_and_wait("getRunsForCleanup", JSON.stringify([">" + c.id]));
                 if (!newRuns)
@@ -1596,12 +1599,16 @@ or {
                 }
               } else {
                 // else: not a cross filter...
-                var newRuns = webappos.webcall_and_wait("getRunsForCleanup", JSON.stringify([">" + c.id]));
-                runGalaxy(newRuns, function() {
-                  let cmd = new webmem.RefreshGalaxyCommand();
-                  cmd.setDataGalaxy(webmem.DataGalaxy.getFirstObject());
-                  webmem.submit(cmd);
-                });
+                if ((c.getState()=="CONFIGURATION_OK")||(c.getState()=="CONFIGURATION_ERROR")) {
+                  // cleanup only after configuration...
+                  var newRuns = webappos.webcall_and_wait("getRunsForCleanup", JSON.stringify([">" + c.id]));
+                  console.log("RUNS after cleanup for "+c.id+" t/o="+jsonObject.timeout, newRuns);
+                  runGalaxy(newRuns, function() {
+                    let cmd = new webmem.RefreshGalaxyCommand();
+                    cmd.setDataGalaxy(webmem.DataGalaxy.getFirstObject());
+                    webmem.submit(cmd);
+                  });
+                }
               }            
           }
 
@@ -1646,7 +1653,6 @@ or {
         runIndex++; 
         let currentComponent = findGalaxyComponentById(runs[runIndex-1].id);
         webappos.webcall("runGalaxyComponentAsync", runs[runIndex - 1]).catch((json)=>{
-          console.log("ERROR DURING RUN",currentComponent.id,json,currentComponent.state);
           let cmd = new webmem.RefreshGalaxyCommand();
           let state = currentComponent.getState()+"";          
           if (state.indexOf("ERROR")<0) {
@@ -1694,14 +1700,10 @@ or {
     function checkRunError(id) {
       if (id == null)
         return;
-      var c = webappos.webcall_and_wait("findObjects", {
-        isKindOf: "GalaxyComponent",
-        id: id
-      });
+      var c = findGalaxyComponentById(id);
 
-      if ((!c) || (c.length == 0))
+      if (!c)
         return;
-      c = c[0];
       if (c.state == "RUN_ERROR") {
         if (c.stateMessage)
           printRunError(c.name + " (" + c.id + ") run error: " + c.stateMessage);
