@@ -1544,10 +1544,12 @@ or {
                 let visiblePlanets = [];
                 for (let r in planets) {
                   if (webmem[r].state == "RUN_OK") {
+                    alert("visible "+webmem[r].id+" "+webmem[r].frame[0].location);
                     // this planet is visible...
-                    visiblePlanets.push(webmem[r]);
+                    visiblePlanets.push({planet: webmem[r], frameLocation: webmem[r].frame[0].location});
                   }
                 }
+                
                 // getting forward cleanup actions...
                 let newRuns = webappos.webcall_and_wait("getRunsForCleanup", JSON.stringify([">" + c.id]));
                 if (!newRuns)
@@ -1570,12 +1572,15 @@ or {
                   var fwait = function () {
                     console.log("fwait");
                     var cnt = 0; // counting closed frames...
-                    for (let i = 0; i < visiblePlanets.length; i++) {
-                      let f = webmem[visiblePlanets[i].frame[0].reference];
-                      if (f.getEnvironmentEngine().length == 0) {
-                        cnt++;
+                    for (let i = 0; i < visiblePlanets.length; i++) 
+                      if (visiblePlanets[i].planet.frame && visiblePlanets[i].planet.frame.length) {
+                        let f = webmem[visiblePlanets[i].planet.frame[0].reference];
+                        if (f.getEnvironmentEngine().length == 0) {
+                          cnt++;
+                        }
                       }
-                    }
+                      else
+                        cnt++; // frame deleted
                     if (cnt != visiblePlanets.length) {
                       setTimeout(fwait, 500);
                       return;
@@ -1583,13 +1588,12 @@ or {
 
                     // adding visualization actions for planets that were visualized before cleanup
                     for (let i = 0; i < visiblePlanets.length; i++) {
-                      //console.log("fwait run "+visiblePlanets[i].id);
-                      var planetRuns = webappos.webcall_and_wait("getRunsForGalaxyComponent", visiblePlanets[i]
+                      var planetRuns = webappos.webcall_and_wait("getRunsForGalaxyComponent", visiblePlanets[i].planet
                         .id);
                       if (planetRuns && (planetRuns.length > 0) && (planetRuns[planetRuns.length - 1].action ==
                           "VisualizePlanet")) {
                         planetRuns[planetRuns.length - 1].frameLocation =
-                          visiblePlanets[i].frame[0].location;
+                          visiblePlanets[i].frameLocation;
                       }
                       runGalaxy(planetRuns);
                     }

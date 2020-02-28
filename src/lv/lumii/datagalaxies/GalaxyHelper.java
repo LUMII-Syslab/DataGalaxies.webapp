@@ -28,6 +28,10 @@ public class GalaxyHelper {
 	{
 		if (!componentObj.getFrame().isEmpty()) {
 						
+			if (componentObj instanceof lv.lumii.datagalaxies.mm.Planet) {
+				//if ("RUN_OK".equals(componentObj.getState()))
+				componentObj.setState("CONFIGURATION_OK");
+			}
 			
 			// detaching previous frame...
 			lv.lumii.datagalaxies.mm.Frame frame_ = componentObj.getFrame().get(0);
@@ -41,6 +45,17 @@ public class GalaxyHelper {
 			dfc.setFrame(frame);
 			dfc.setPermanently(true);
 			dfc.submit();
+			
+			lv.lumii.datagalaxies.mm.GalaxyEngineMetamodelFactory geFactory = new lv.lumii.datagalaxies.mm.GalaxyEngineMetamodelFactory();
+			
+			try {
+				geFactory.setRAAPI(componentObj.getRAAPI(), "", true);
+				GalaxyHelper.refreshGalaxy(geFactory, null);
+			}
+			catch (Throwable t)
+			{
+				return;
+			}
 			
 		}
 		

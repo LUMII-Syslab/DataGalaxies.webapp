@@ -3,7 +3,7 @@
 <script src="/jquery.min.js"></script>
 <script src="/webappos.js"></script>
 </head>
-<body>
+<body style="padding:0;margin:0;width:100%;height:100%;">
 
 <b>Cross-filter name:</b> <input type="edit" id="name"/><p>
 <b>Tree source star:</b> <select id="sourceStarSelect"></select><p>
@@ -119,7 +119,7 @@ function store(crossFilter)
 
 </script>
 <input type="button" value="Reload tree" onclick="configFrame.src=configFrame.src;"></input>
-<iframe id="configFrame" height="300px" width="100%" src="../../galactictypes/Subtree%20filter/endUserConfiguration.html" onload="innerLoad();"/>
+<iframe id="configFrame" style="width:calc(100% - 4px); height:300px;padding:0;margin:0;" src="../../galactictypes/Subtree%20filter/endUserConfiguration.html" onload="innerLoad();"/>
 
 </body>
 </html>

@@ -10,12 +10,39 @@
 <body>
 <span style="float:right;"><a href="license.html" target="_blank">License</a></span><br>
   <div id="chartDiv"></div>
+  <input type="button" value="Refresh galaxy" onclick="refreshGalaxy()"/>
 
   <script>
 
     var chart; // global
     var json; // global
     var loading;
+
+    var planet;
+    var lastSelection = []; // last selection at pie chart
+      var f2a = {}; // filter to attribute
+      var a2v = {}; // attribute to filter value
+
+    function refreshGalaxy() {
+              if (lastSelection.length == 0) {
+                var stack = chart.getPie();
+                stack.shift(); // remove the first empty string
+                if (stack.length==0) {
+                  refreshFilters(planet.crossFilter, null, f2a);
+                }
+                else {
+                  var data = {
+                   "values" : getPieData(json, planet.nameAttribute, planet.valueAttribute, a2v)
+                  };
+
+                  var node = getPieNodeByStack(data.values, stack);
+                  refreshFilters(planet.crossFilter, node, f2a);
+                }
+
+                return;
+              }
+              refreshFilters(planet.crossFilter, lastSelection[0].data, f2a);
+    }
 
     function getPieData(json, nameAttribute, valueAttribute, a2v)
        // takes array, returns array
@@ -162,18 +189,20 @@ catch(ttt) {console.log(ttt);}
           var jsonNode = findNode(json, attr, node[attr]);
           var values = collectSubtreeValues(jsonNode, attr);
           needRefresh = (values != f.selectedValues);
-          f.selectedValues = values;
+          f.setSelectedValues(values);
           console.log("filter "+f.id+" now is: "+f.selectedValues);
         }
-
+alert("cf need refresh "+needRefresh+" "+f.selectedValues);
         if (needRefresh) {
 
           webmem[f.reference].setSelectedValues(f.selectedValues);
 
-          let cmd = new webmem.RefreshGalaxyCommand();
-          cmd.setModifiedComponent(webmem[f.reference]);
-          cmd.setDataGalaxy(webmem.DataGalaxy.getFirstObject());
-          webmem.submit(cmd);
+         // setTimeout(function(f) {
+            let cmd = new webmem.RefreshGalaxyCommand();
+            cmd.setModifiedComponent(webmem[f.reference]);
+            cmd.setDataGalaxy(webmem.DataGalaxy.getFirstObject());
+            webmem.submit(cmd);
+         // }, 0, f);
 
         }
       }
@@ -181,7 +210,7 @@ catch(ttt) {console.log(ttt);}
     }
 
     function load(planet) {
-
+      window.planet = webmem[planet.reference];
 
       var s = webappos.webcall_and_wait("webappos.getFileContentFromCurrentProjectAsUTF8String",planet.star[0].starData[0].fileName).content;
       json = JSON.parse(s);
@@ -191,8 +220,6 @@ catch(ttt) {console.log(ttt);}
 
 
 
-      var f2a = {}; // filter to attribute
-      var a2v = {}; // attribute to filter value
 
       if (planet.filtersToAttributes) {
         var a = planet.filtersToAttributes.split(";");
@@ -207,6 +234,7 @@ catch(ttt) {console.log(ttt);}
       if (planet.crossFilter) {
         for (var i in planet.crossFilter) {
           if (planet.crossFilter[i].id in f2a) {
+            console.log("LOAD CROSS FILTER: "+ planet.crossFilter[i].id+" VALUE "+planet.crossFilter[i].selectedValues);
             a2v[f2a[planet.crossFilter[i].id]] = planet.crossFilter[i].selectedValues;
           }
         }
@@ -249,35 +277,11 @@ catch(ttt) {console.log(ttt);}
             onChartUpdate: function updateEvent(event){
               if (loading) return;
               if (!chart) return;
-              var stack = chart.getPie();
-
-              stack.shift(); // remove the first empty string
-              if (stack.length==0) {
-                refreshFilters(planet.crossFilter, null, f2a);
-              }
-              else {
-                var node = getPieNodeByStack(data.values, stack);
-                refreshFilters(planet.crossFilter, node, f2a);
-              }
+              // refresh moved to refreshGalaxy (onclick)
             },
             onSelectionChange: function (event){
               if (loading) return;
-              var selection = event.selection;
-              if (selection.length == 0) {
-                var stack = chart.getPie();
-                stack.shift(); // remove the first empty string
-                if (stack.length==0) {
-                  refreshFilters(planet.crossFilter, null, f2a);
-                }
-                else {
-                  var node = getPieNodeByStack(data.values, stack);
-                  refreshFilters(planet.crossFilter, node, f2a);
-                }
-
-                return;
-              }
-              refreshFilters(planet.crossFilter, selection[0].data, f2a);
-
+              lastSelection = event.selection;
             }
           }
 /*,

@@ -2145,7 +2145,7 @@ public class GalaxyEngine_webcalls {
 				return "{}";
 			}
 			
-			if ("RUN_OK".equals(c.getState()) && !"FinalizeStar".equals(action)) {
+			if ("RUN_OK".equals(c.getState())) {
 				GalaxyHelper.refreshGalaxy(geFactory, c);
 				return "{}"; // already run
 			}
@@ -2160,7 +2160,7 @@ public class GalaxyEngine_webcalls {
 				if ("CONFIGURATION_ERROR".equals(c.getState()))
 					return "{\"error\":\"Configuration error.\"}"; // do not call refresh by ourselves, since the client-side will take care of that refresh when receiving the error
 				else
-					return "{\"error\":\"Run or configuration error.\"}";
+					return "{\"error\":\"Run or configuration error."+c.getState()+"\"}";
 			}
 			
 			
@@ -2528,7 +2528,7 @@ public class GalaxyEngine_webcalls {
 			} catch (JSONException e) {
 			}
 			try {
-				arg.put("timeout", 3000);
+				arg.put("timeout", 20000);
 			} catch (JSONException e) {
 			}
 			

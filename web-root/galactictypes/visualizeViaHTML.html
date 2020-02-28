@@ -62,6 +62,7 @@
 
   var galaxyComponent;
   // a JavaScript object conforming to TDA JSON syntax
+  var frameCopy;
 
   function onFrameLoad() {
     try {
@@ -70,13 +71,16 @@
       else // IE
         configFrame.frameElement.contentWindow.eval("if (load) load(" + JSON.stringify(galaxyComponent) + ");");
 
-      galaxyComponent.state = "RUN_OK";
+      webmem[galaxyComponent.reference].setState("RUN_OK");
+//      galaxyComponent.state = "RUN_OK";
     } catch (t) {
-      galaxyComponent.state = "RUN_ERROR";
-      galaxyComponent.stateMessage = "" + t;
+      webmem[galaxyComponent.reference].setState("RUN_ERROR");
+      webmem[galaxyComponent.reference].setStateMessage(""+t);
+//      galaxyComponent.state = "RUN_ERROR";
+//      galaxyComponent.stateMessage = "" + t;
     }
 
-    webappos.webcall_and_wait("storeObjects", [galaxyComponent]);
+//    webappos.webcall_and_wait("storeObjects", [galaxyComponent]);
 
     let cmd = new webmem.RefreshGalaxyCommand();
     cmd.setModifiedComponent(webmem[galaxyComponent.reference]);
@@ -164,13 +168,23 @@
     webmem.submit(ev);
 
 
-    frameCopy.setGalaxyComponent(webmem[galaxyComponent.reference]);
-    let cmd = new webmem.AttachFrameCommand();
-    cmd.linkFrame(frameCopy);
-    webmem.submit(cmd);
-    frameCopy = null;
 
   }
+
+function finalize() {
+  if (!frameCopy)
+    return;
+/* we have to do this in finalize, since the previous frame
+   has to be detached from the component, but still this
+  JavaScript has to be life (i.e., EE frame must not have been detached yet);
+  we have to find some more appropriate solution later
+*/
+  let cmd = new webmem.AttachFrameCommand();
+  cmd.linkFrame(frameCopy);
+  webmem.submit(cmd);
+  frameCopy.setGalaxyComponent(webmem[galaxyComponent.reference]);
+  frameCopy = null;
+}
 
   function onClose() {
     let ev = new webmem.CloseFrameRequestedEvent();
@@ -181,7 +195,7 @@
   }
 
   function bodyResized() {
-    configFrameDiv.style.height = document.body.parentElement.clientHeight - footer.offsetHeight + "px";
+    configFrameDiv.style.height = document.body.parentElement.clientHeight - footer.offsetHeight -2 + "px";
     configFrameDiv.style.width = document.body.parentElement.clientWidth + "px";
   };
 </script>
