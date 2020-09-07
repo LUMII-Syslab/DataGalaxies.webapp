@@ -21,7 +21,7 @@ default user "webappos").
 ```bash
 cd webAppOS/dist
 mkdir -p home/webappos
-cp apps/DataGalaxies.webapp/sample\ projects/${html`*`} home/webappos/
+cp apps/DataGalaxies.webapp/sample\ projects/* home/webappos/
 ```
 
 Then after launching the DataGalaxies app (e.g., from the webAppOS desktop),
