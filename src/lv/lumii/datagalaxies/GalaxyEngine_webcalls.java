@@ -29,6 +29,7 @@ import lv.lumii.datagalaxies.mm.StellarWind;
 import lv.lumii.datagalaxies.mm.GalaxyEngineMetamodelFactory.ElementReferenceException;
 import lv.lumii.datagalaxies.mm.LaunchTransformationCommand;
 import lv.lumii.tda.raapi.RAAPI;
+import lv.lumii.tda.raapi.RAAPIHelper;
 
 public class GalaxyEngine_webcalls {
 	
@@ -43,6 +44,18 @@ public class GalaxyEngine_webcalls {
 		
 		seed.callingConventions = WebCaller.CallingConventions.WEBMEMCALL;
 		seed.webmemArgument = rCmd;
+		
+		long rCls = RAAPIHelper.getObjectClass(webmem, rCmd);
+		long rAttr = webmem.findAttribute(rCls, "uri");
+		String transformationName = webmem.getAttributeValue(rCmd, rAttr);
+		
+		int i = transformationName.indexOf(":");
+		if (i>=0) {
+			transformationName = transformationName.substring(0,i)+ "("+rCmd+")"+transformationName.substring(i);
+			webmem.setAttributeValue(rCmd, rAttr, transformationName);
+		}
+		transformationName = webmem.getAttributeValue(rCmd, rAttr);
+		System.out.println("RTLTC transfName="+transformationName);
 		
 
 		if (ctx!=null) {
